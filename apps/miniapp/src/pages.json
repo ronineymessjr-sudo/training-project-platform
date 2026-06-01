@@ -1,0 +1,51 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/login",
+    "pages/project/list",
+    "pages/project/detail",
+    "pages/group/list",
+    "pages/progress/list",
+    "pages/document/list",
+    "pages/score/list",
+    "pages/profile/profile"
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "实训项目",
+    "navigationBarBackgroundColor": "#1890ff",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1890ff",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/project/list",
+        "text": "项目",
+        "iconPath": "static/tabbar/project.png",
+        "selectedIconPath": "static/tabbar/project-active.png"
+      },
+      {
+        "pagePath": "pages/progress/list",
+        "text": "进度",
+        "iconPath": "static/tabbar/progress.png",
+        "selectedIconPath": "static/tabbar/progress-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "static/tabbar/profile.png",
+        "selectedIconPath": "static/tabbar/profile-active.png"
+      }
+    ]
+  }
+}

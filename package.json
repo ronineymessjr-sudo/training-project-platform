@@ -1,0 +1,32 @@
+{
+  "name": "training-project-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "实训项目全过程管理平台",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=web",
+    "dev:server": "turbo run dev --filter=server",
+    "dev:weapp": "turbo run dev --filter=weapp",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=web",
+    "build:server": "turbo run build --filter=server",
+    "build:weapp": "turbo run build --filter=weapp",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "cd apps/server && npm run db:migrate",
+    "db:seed": "cd apps/server && npm run db:seed",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
