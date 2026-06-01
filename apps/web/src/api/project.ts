@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 export interface Project {
   id: number
@@ -65,7 +65,7 @@ export const getProjectList = async (params?: ProjectQuery): Promise<ApiResponse
   query = query.range(from, to).order('created_at', { ascending: false })
 
   const result = await query
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     // 转换字段名
@@ -93,7 +93,7 @@ export const getProjectDetail = async (id: number): Promise<ApiResponse<Project>
     .eq('id', id)
     .single()
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200 && response.data) {
     const item = response.data as any
@@ -126,7 +126,7 @@ export const createProject = async (data: Partial<Project>): Promise<ApiResponse
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const updateProject = async (id: number, data: Partial<Project>): Promise<ApiResponse<Project>> => {
@@ -146,7 +146,7 @@ export const updateProject = async (id: number, data: Partial<Project>): Promise
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const deleteProject = async (id: number): Promise<ApiResponse<void>> => {
@@ -155,7 +155,7 @@ export const deleteProject = async (id: number): Promise<ApiResponse<void>> => {
     .delete()
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const getProjectGroups = async (id: number): Promise<ApiResponse<any[]>> => {
@@ -164,7 +164,7 @@ export const getProjectGroups = async (id: number): Promise<ApiResponse<any[]>> 
     .select('*')
     .eq('project_id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const getProjectProgress = async (id: number): Promise<ApiResponse<any[]>> => {
@@ -173,7 +173,7 @@ export const getProjectProgress = async (id: number): Promise<ApiResponse<any[]>
     .select('*')
     .eq('project_id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const projectApi = {

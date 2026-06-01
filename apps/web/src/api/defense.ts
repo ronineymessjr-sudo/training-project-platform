@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 // API 响应类型
 interface ApiResponse<T> {
@@ -80,7 +80,7 @@ export const getDefenseList = async (params?: {
   query = query.range(from, to).order('scheduled_at', { ascending: true })
 
   const result = await query
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const list = (result.data as any[])?.map((item: any) => ({
@@ -106,7 +106,7 @@ export const getDefenseDetail = async (id: number): Promise<ApiResponse<Defense>
     .eq('id', id)
     .single()
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200 && response.data) {
     const item = response.data as any
@@ -130,7 +130,7 @@ export const getMyDefense = async (): Promise<ApiResponse<Defense>> => {
     .eq('student_id', user?.id)
     .single()
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200 && response.data) {
     const item = response.data as any
@@ -164,7 +164,7 @@ export const getDefenseSchedule = async (params?: {
   query = query.order('scheduled_at', { ascending: true })
 
   const result = await query
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const defenses = (response.data as any[])?.map((item: any) => ({
@@ -218,7 +218,7 @@ export const createDefense = async (data: {
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 更新答辩安排
@@ -240,7 +240,7 @@ export const updateDefense = async (
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 取消答辩
@@ -253,7 +253,7 @@ export const cancelDefense = async (id: number, reason?: string): Promise<ApiRes
     })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 开始答辩
@@ -263,7 +263,7 @@ export const startDefense = async (id: number): Promise<ApiResponse<void>> => {
     .update({ status: 'in_progress' })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 结束答辩
@@ -273,7 +273,7 @@ export const endDefense = async (id: number): Promise<ApiResponse<void>> => {
     .update({ status: 'completed' })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取答辩记录
@@ -284,7 +284,7 @@ export const getDefenseRecord = async (id: number): Promise<ApiResponse<DefenseR
     .eq('defense_id', id)
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 提交答辩记录
@@ -309,7 +309,7 @@ export const submitDefenseRecord = async (
       suggestions: data.suggestions,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取答辩统计
@@ -362,7 +362,7 @@ export const getPendingDefenseScores = async (): Promise<ApiResponse<Defense[]>>
     .eq('status', 'completed')
     .contains('committee_members', [user?.id])
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     response.data = (response.data as any[])?.map((item: any) => ({
@@ -400,5 +400,5 @@ export const submitDefenseScore = async (data: {
       overall_comment: data.overallComment,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }

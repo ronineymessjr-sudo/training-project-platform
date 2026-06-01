@@ -1,4 +1,4 @@
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, Rate, Select, message, Progress, Statistic, Row, Col } from 'antd'
+﻿import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, Rate, Select, message, Progress, Statistic, Row, Col } from 'antd'
 import { TrophyOutlined, StarOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
@@ -54,7 +54,7 @@ export default function ScoreList() {
         }
       } else {
         // 学生查看成绩
-        const res = await getProjectScores(user?.id || 0)
+        const res = await getProjectScores((user?.id as any) || 0)
         if (res.data) {
           // 转换数据格式
           const records: ScoreRecord[] = []

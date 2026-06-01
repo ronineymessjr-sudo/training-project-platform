@@ -1,4 +1,4 @@
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message, Popconfirm, Tabs, Drawer, Descriptions, Badge } from 'antd'
+﻿import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message, Popconfirm, Tabs, Drawer, Descriptions, Badge } from 'antd'
 import { PlusOutlined, UserOutlined, LockOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
@@ -41,7 +41,7 @@ export default function AnnouncementManagement() {
     try {
       const res = await getAnnouncementList({ page: pagination.current, pageSize: pagination.pageSize })
       if (res.data) {
-        setData(res.data.list)
+        setData((res.data as any)?.list || [])
         setPagination(p => ({ ...p, total: res.data.total }))
       }
     } catch (error) {

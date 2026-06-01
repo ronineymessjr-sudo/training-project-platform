@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 export interface Group {
   id: number
@@ -79,7 +79,7 @@ export const getGroupList = async (params?: {
   query = query.range(from, to).order('created_at', { ascending: false })
 
   const result = await query
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const list = (result.data as any[])?.map((item: any) => ({
@@ -106,7 +106,7 @@ export const getGroupDetail = async (id: number): Promise<ApiResponse<Group>> =>
     .eq('id', id)
     .single()
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200 && response.data) {
     const item = response.data as any
@@ -145,7 +145,7 @@ export const createGroup = async (data: {
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const updateGroup = async (id: number, data: Partial<Group>): Promise<ApiResponse<Group>> => {
@@ -163,7 +163,7 @@ export const updateGroup = async (id: number, data: Partial<Group>): Promise<Api
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const deleteGroup = async (id: number): Promise<ApiResponse<void>> => {
@@ -172,7 +172,7 @@ export const deleteGroup = async (id: number): Promise<ApiResponse<void>> => {
     .delete()
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const addGroupMember = async (groupId: number, studentId: number): Promise<ApiResponse<void>> => {
@@ -184,7 +184,7 @@ export const addGroupMember = async (groupId: number, studentId: number): Promis
       role: 0,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const removeGroupMember = async (groupId: number, studentId: number): Promise<ApiResponse<void>> => {
@@ -194,7 +194,7 @@ export const removeGroupMember = async (groupId: number, studentId: number): Pro
     .eq('group_id', groupId)
     .eq('student_id', studentId)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const applyToGroup = async (groupId: number, message?: string): Promise<ApiResponse<void>> => {
@@ -209,7 +209,7 @@ export const applyToGroup = async (groupId: number, message?: string): Promise<A
       message,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const getGroupApplications = async (groupId: number): Promise<ApiResponse<GroupApplication[]>> => {
@@ -218,7 +218,7 @@ export const getGroupApplications = async (groupId: number): Promise<ApiResponse
     .select('*, profiles(real_name, username)')
     .eq('group_id', groupId)
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     response.data = (response.data as any[])?.map((item: any) => ({
@@ -262,7 +262,7 @@ export const processGroupApplication = async (
     }
   }
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 export const groupApi = {

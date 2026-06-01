@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'auth-token'
+﻿const TOKEN_KEY = 'auth-token'
 
 export function get(): string | null {
   try {
@@ -11,11 +11,11 @@ export function get(): string | null {
 export function set(value: string): void {
   try {
     localStorage.setItem(TOKEN_KEY, value)
-  } catch {}
+  } catch { console.error('Operation failed') }
 }
 
 export function remove(): void {
   try {
     localStorage.removeItem(TOKEN_KEY)
-  } catch {}
+  } catch { console.error('Operation failed') }
 }

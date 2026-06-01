@@ -9,45 +9,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =====================================================
--- 1. 用户和认证相关表
+-- 1. 基础表（不依赖其他表）
 -- =====================================================
-
--- 注意：Supabase Auth 自带用户管理，这里创建 profiles 表存储额外信息
--- 用户通过 Supabase Auth 注册，然后在 profiles 表中存储角色等扩展信息
-
-CREATE TABLE IF NOT EXISTS profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    real_name VARCHAR(50) NOT NULL,
-    email VARCHAR(100),
-    phone VARCHAR(20),
-    avatar_url VARCHAR(500),
-    gender SMALLINT DEFAULT 0, -- 0-未知, 1-男, 2-女
-    status SMALLINT DEFAULT 1, -- 0-禁用, 1-启用
-    last_login_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 自动创建 profile 的触发器
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.profiles (id, username, real_name, email)
-    VALUES (
-        NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
-        COALESCE(NEW.raw_user_meta_data->>'real_name', NEW.email),
-        NEW.email
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- 角色表
 CREATE TABLE IF NOT EXISTS roles (
@@ -56,14 +19,6 @@ CREATE TABLE IF NOT EXISTS roles (
     display_name VARCHAR(50) NOT NULL,
     description VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 用户角色关联表
-CREATE TABLE IF NOT EXISTS user_roles (
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role_id INT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (user_id, role_id)
 );
 
 -- 权限表
@@ -77,6 +32,54 @@ CREATE TABLE IF NOT EXISTS permissions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 评分维度表
+CREATE TABLE IF NOT EXISTS score_dimensions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    default_weight NUMERIC(5,2) DEFAULT 0,
+    is_default SMALLINT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 专业表
+CREATE TABLE IF NOT EXISTS majors (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(20) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    department VARCHAR(100),
+    description TEXT,
+    status SMALLINT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
+-- 2. 用户相关表（依赖基础表）
+-- =====================================================
+
+-- 用户扩展信息表（profiles）
+CREATE TABLE IF NOT EXISTS profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    real_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    avatar_url VARCHAR(500),
+    gender SMALLINT DEFAULT 0,
+    status SMALLINT DEFAULT 1,
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 用户角色关联表
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role_id INT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, role_id)
+);
+
 -- 角色权限关联表
 CREATE TABLE IF NOT EXISTS role_permissions (
     role_id INT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
@@ -84,16 +87,16 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     PRIMARY KEY (role_id, permission_id)
 );
 
--- 菜单表
+-- 菜单表（自引用，parent_id 可为空）
 CREATE TABLE IF NOT EXISTS menus (
     id SERIAL PRIMARY KEY,
-    parent_id INT DEFAULT 0,
+    parent_id INT REFERENCES menus(id) ON DELETE SET NULL,
     name VARCHAR(50) NOT NULL,
     path VARCHAR(200),
     component VARCHAR(200),
     icon VARCHAR(50),
     sort_order INT DEFAULT 0,
-    menu_type SMALLINT DEFAULT 1, -- 1-目录, 2-菜单, 3-按钮
+    menu_type SMALLINT DEFAULT 1,
     visible SMALLINT DEFAULT 1,
     status SMALLINT DEFAULT 1,
     permission_id INT REFERENCES permissions(id) ON DELETE SET NULL,
@@ -126,32 +129,24 @@ CREATE TABLE IF NOT EXISTS operation_logs (
 );
 
 -- =====================================================
--- 2. 班级和专业
+-- 3. 班级相关表
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS majors (
-    id SERIAL PRIMARY KEY,
-    code VARCHAR(20) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    department VARCHAR(100),
-    description TEXT,
-    status SMALLINT DEFAULT 1,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
+-- 班级表
 CREATE TABLE IF NOT EXISTS classes (
     id SERIAL PRIMARY KEY,
     major_id INT NOT NULL REFERENCES majors(id),
     grade INT NOT NULL,
     class_no INT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    counselor_id UUID REFERENCES auth.users(id),
+    counselor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     student_count INT DEFAULT 0,
     status SMALLINT DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (major_id, grade, class_no)
 );
 
+-- 学生班级关联表
 CREATE TABLE IF NOT EXISTS student_classes (
     student_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     class_id INT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
@@ -161,40 +156,43 @@ CREATE TABLE IF NOT EXISTS student_classes (
 );
 
 -- =====================================================
--- 3. 项目和题目
+-- 4. 项目和题目表
 -- =====================================================
 
+-- 题目表（creator_id 可为空，因为种子数据时还没有用户）
 CREATE TABLE IF NOT EXISTS topics (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     description TEXT,
     requirements TEXT,
-    difficulty SMALLINT DEFAULT 1, -- 1-简单, 2-中等, 3-困难
+    difficulty SMALLINT DEFAULT 1,
     estimated_days INT,
     tech_stack JSONB,
     max_group_size INT DEFAULT 4,
     min_group_size INT DEFAULT 1,
-    creator_id UUID NOT NULL REFERENCES auth.users(id),
-    status SMALLINT DEFAULT 1, -- 0-草稿, 1-已发布, 2-已归档
+    creator_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    status SMALLINT DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 项目表
 CREATE TABLE IF NOT EXISTS projects (
     id BIGSERIAL PRIMARY KEY,
-    topic_id BIGINT REFERENCES topics(id),
+    topic_id BIGINT REFERENCES topics(id) ON DELETE SET NULL,
     name VARCHAR(200) NOT NULL,
     description TEXT,
     class_id INT NOT NULL REFERENCES classes(id),
     teacher_id UUID NOT NULL REFERENCES auth.users(id),
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    status SMALLINT DEFAULT 0, -- 0-未开始, 1-进行中, 2-已结束, 3-已归档
+    status SMALLINT DEFAULT 0,
     config JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 项目阶段表
 CREATE TABLE IF NOT EXISTS project_phases (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -208,51 +206,54 @@ CREATE TABLE IF NOT EXISTS project_phases (
 );
 
 -- =====================================================
--- 4. 分组和成员
+-- 5. 分组和成员表
 -- =====================================================
 
+-- 分组表
 CREATE TABLE IF NOT EXISTS groups (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    leader_id UUID REFERENCES auth.users(id),
+    leader_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     max_members INT DEFAULT 4,
-    status SMALLINT DEFAULT 1, -- 0-解散, 1-正常
+    status SMALLINT DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 分组成员表
 CREATE TABLE IF NOT EXISTS group_members (
     id BIGSERIAL PRIMARY KEY,
     group_id BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
     student_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role SMALLINT DEFAULT 0, -- 0-成员, 1-组长
+    role SMALLINT DEFAULT 0,
     joined_at TIMESTAMPTZ DEFAULT NOW(),
     status SMALLINT DEFAULT 1,
     UNIQUE (group_id, student_id)
 );
 
+-- 分组申请表
 CREATE TABLE IF NOT EXISTS group_applications (
     id BIGSERIAL PRIMARY KEY,
     group_id BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
     student_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    type SMALLINT NOT NULL, -- 1-申请加入, 2-邀请加入
-    status SMALLINT DEFAULT 0, -- 0-待处理, 1-已同意, 2-已拒绝
+    type SMALLINT NOT NULL,
+    status SMALLINT DEFAULT 0,
     message VARCHAR(500),
-    processed_by UUID REFERENCES auth.users(id),
+    processed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     processed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
--- 5. 进度跟踪
+-- 6. 进度跟踪表
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS progress (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     group_id BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-    phase_id BIGINT REFERENCES project_phases(id),
+    phase_id BIGINT REFERENCES project_phases(id) ON DELETE SET NULL,
     title VARCHAR(200) NOT NULL,
     content TEXT,
     completion_rate INT DEFAULT 0,
@@ -272,7 +273,7 @@ CREATE TABLE IF NOT EXISTS progress_logs (
 );
 
 -- =====================================================
--- 6. 文档管理
+-- 7. 文档管理表
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS documents (
@@ -286,7 +287,7 @@ CREATE TABLE IF NOT EXISTS documents (
     file_size BIGINT,
     file_hash VARCHAR(64),
     description TEXT,
-    category SMALLINT DEFAULT 1, -- 1-需求, 2-设计, 3-代码, 4-测试, 5-报告, 6-其他
+    category SMALLINT DEFAULT 1,
     status SMALLINT DEFAULT 1,
     download_count INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -305,17 +306,8 @@ CREATE TABLE IF NOT EXISTS document_versions (
 );
 
 -- =====================================================
--- 7. 评分系统
+-- 8. 评分系统表
 -- =====================================================
-
-CREATE TABLE IF NOT EXISTS score_dimensions (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    default_weight NUMERIC(5,2) DEFAULT 0,
-    is_default SMALLINT DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
 
 CREATE TABLE IF NOT EXISTS project_score_configs (
     id BIGSERIAL PRIMARY KEY,
@@ -345,13 +337,13 @@ CREATE TABLE IF NOT EXISTS score_summaries (
     total_score NUMERIC(6,2) NOT NULL,
     weighted_score NUMERIC(6,2),
     rank INT,
-    evaluator_id UUID REFERENCES auth.users(id),
+    evaluator_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     evaluated_at TIMESTAMPTZ,
     UNIQUE (project_id, group_id)
 );
 
 -- =====================================================
--- 8. 答辩系统
+-- 9. 答辩系统表
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS defenses (
@@ -364,8 +356,8 @@ CREATE TABLE IF NOT EXISTS defenses (
     end_time TIME NOT NULL,
     location VARCHAR(200),
     panel_teacher_ids JSONB,
-    secretary_id UUID REFERENCES auth.users(id),
-    status SMALLINT DEFAULT 0, -- 0-待安排, 1-已安排, 2-进行中, 3-已完成
+    secretary_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    status SMALLINT DEFAULT 0,
     max_duration INT DEFAULT 30,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -376,7 +368,7 @@ CREATE TABLE IF NOT EXISTS defense_scores (
     defense_id BIGINT NOT NULL REFERENCES defenses(id) ON DELETE CASCADE,
     group_id BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
     scorer_id UUID NOT NULL REFERENCES auth.users(id),
-    scorer_role SMALLINT NOT NULL, -- 1-指导教师, 2-评阅教师, 3-答辩评委
+    scorer_role SMALLINT NOT NULL,
     presentation_score NUMERIC(5,2),
     qa_score NUMERIC(5,2),
     document_score NUMERIC(5,2),
@@ -387,7 +379,7 @@ CREATE TABLE IF NOT EXISTS defense_scores (
 );
 
 -- =====================================================
--- 9. 工作量
+-- 10. 工作量表
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS workloads (
@@ -397,21 +389,21 @@ CREATE TABLE IF NOT EXISTS workloads (
     student_id UUID NOT NULL REFERENCES auth.users(id),
     task_name VARCHAR(200) NOT NULL,
     task_description TEXT,
-    task_type SMALLINT DEFAULT 1, -- 1-需求分析, 2-设计, 3-编码, 4-测试, 5-文档, 6-部署
+    task_type SMALLINT DEFAULT 1,
     estimated_hours NUMERIC(6,2),
     actual_hours NUMERIC(6,2),
     completion_rate INT DEFAULT 0,
     contribution_ratio NUMERIC(5,2),
-    status SMALLINT DEFAULT 0, -- 0-未开始, 1-进行中, 2-已完成
+    status SMALLINT DEFAULT 0,
     report_date DATE,
-    verified_by UUID REFERENCES auth.users(id),
+    verified_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =====================================================
--- 10. 公告
+-- 11. 公告表
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS announcements (
@@ -419,11 +411,11 @@ CREATE TABLE IF NOT EXISTS announcements (
     project_id BIGINT REFERENCES projects(id) ON DELETE CASCADE,
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
-    type SMALLINT DEFAULT 1, -- 1-通知, 2-公告, 3-提醒
-    priority SMALLINT DEFAULT 0, -- 0-普通, 1-重要, 2-紧急
-    publisher_id UUID NOT NULL REFERENCES auth.users(id),
+    type SMALLINT DEFAULT 1,
+    priority SMALLINT DEFAULT 0,
+    publisher_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     target_roles JSONB,
-    status SMALLINT DEFAULT 1, -- 0-草稿, 1-已发布, 2-已撤回
+    status SMALLINT DEFAULT 1,
     published_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -438,19 +430,38 @@ CREATE TABLE IF NOT EXISTS announcement_reads (
 );
 
 -- =====================================================
--- Row Level Security (RLS) 策略
+-- 12. 触发器：自动创建 profile
 -- =====================================================
 
--- 启用所有表的 RLS
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, username, real_name, email)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'username', NEW.email),
+        COALESCE(NEW.raw_user_meta_data->>'real_name', NEW.email),
+        NEW.email
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- =====================================================
+-- 13. 启用 RLS
+-- =====================================================
+
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE menus ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_menus ENABLE ROW LEVEL SECURITY;
 ALTER TABLE operation_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE majors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE topics ENABLE ROW LEVEL SECURITY;
@@ -463,7 +474,6 @@ ALTER TABLE progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE progress_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_versions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE score_dimensions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE project_score_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE score_summaries ENABLE ROW LEVEL SECURITY;
@@ -473,78 +483,71 @@ ALTER TABLE workloads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcement_reads ENABLE ROW LEVEL SECURITY;
 
--- 用户只能查看和修改自己的 profile
+-- =====================================================
+-- 14. RLS 策略
+-- =====================================================
+
+-- profiles
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
-
--- 管理员可以查看所有 profile
 CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
 );
 
--- 所有认证用户可以查看角色和权限
+-- roles, permissions, menus（所有认证用户可查看）
 CREATE POLICY "Authenticated users can view roles" ON roles FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view permissions" ON permissions FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view role_permissions" ON role_permissions FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view menus" ON menus FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view role_menus" ON role_menus FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- 用户可以查看自己的角色
+-- user_roles
 CREATE POLICY "Users can view own roles" ON user_roles FOR SELECT USING (auth.uid() = user_id);
 
--- 所有认证用户可以查看专业和班级
+-- classes, majors, student_classes
 CREATE POLICY "Authenticated users can view majors" ON majors FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view classes" ON classes FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view student_classes" ON student_classes FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- 所有认证用户可以查看题目
+-- topics
 CREATE POLICY "Authenticated users can view topics" ON topics FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- 所有认证用户可以查看项目
+-- projects
 CREATE POLICY "Authenticated users can view projects" ON projects FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view project_phases" ON project_phases FOR SELECT USING (auth.uid() IS NOT NULL);
-
--- 教师/管理员可以创建项目
 CREATE POLICY "Teachers can create projects" ON projects FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
-
--- 教师/管理员可以更新项目
 CREATE POLICY "Teachers can update projects" ON projects FOR UPDATE USING (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
 
--- 所有认证用户可以查看分组
+-- groups
 CREATE POLICY "Authenticated users can view groups" ON groups FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view group_members" ON group_members FOR SELECT USING (auth.uid() IS NOT NULL);
-
--- 学生可以创建分组
 CREATE POLICY "Students can create groups" ON groups FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
--- 组长可以更新分组
 CREATE POLICY "Leaders can update groups" ON groups FOR UPDATE USING (
     leader_id = auth.uid() OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
 
--- 学生可以申请加入分组
+-- group_applications
 CREATE POLICY "Students can apply groups" ON group_applications FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Users can view own applications" ON group_applications FOR SELECT USING (
-    student_id = auth.uid() OR leader_id IN (SELECT leader_id FROM groups WHERE id = group_id)
+    student_id = auth.uid() OR auth.uid() IN (SELECT leader_id FROM groups WHERE id = group_id)
 );
 
--- 所有认证用户可以查看进度
+-- progress
 CREATE POLICY "Authenticated users can view progress" ON progress FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Students can create progress" ON progress FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Users can update own progress" ON progress FOR UPDATE USING (
     reporter_id = auth.uid() OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
 
--- 所有认证用户可以查看文档
+-- documents
 CREATE POLICY "Authenticated users can view documents" ON documents FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Users can upload documents" ON documents FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- 评分相关
+-- scores
 CREATE POLICY "Authenticated users can view scores" ON scores FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Teachers can submit scores" ON scores FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
@@ -553,7 +556,7 @@ CREATE POLICY "Authenticated users can view score_dimensions" ON score_dimension
 CREATE POLICY "Authenticated users can view project_score_configs" ON project_score_configs FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view score_summaries" ON score_summaries FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- 答辩相关
+-- defenses
 CREATE POLICY "Authenticated users can view defenses" ON defenses FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Teachers can manage defenses" ON defenses FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
@@ -563,14 +566,14 @@ CREATE POLICY "Teachers can submit defense_scores" ON defense_scores FOR INSERT 
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
 
--- 工作量相关
+-- workloads
 CREATE POLICY "Authenticated users can view workloads" ON workloads FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Students can submit workloads" ON workloads FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Users can update own workloads" ON workloads FOR UPDATE USING (
     student_id = auth.uid() OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
 
--- 公告相关
+-- announcements
 CREATE POLICY "Authenticated users can view announcements" ON announcements FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Teachers can create announcements" ON announcements FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
@@ -578,14 +581,15 @@ CREATE POLICY "Teachers can create announcements" ON announcements FOR INSERT WI
 CREATE POLICY "Users can view own announcement_reads" ON announcement_reads FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert announcement_reads" ON announcement_reads FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- 操作日志
+-- operation_logs
 CREATE POLICY "Users can insert own logs" ON operation_logs FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Admins can view all logs" ON operation_logs FOR SELECT USING (
     EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
 );
+CREATE POLICY "Users can view own logs" ON operation_logs FOR SELECT USING (user_id = auth.uid());
 
 -- =====================================================
--- 种子数据
+-- 15. 种子数据（不依赖用户数据）
 -- =====================================================
 
 -- 角色
@@ -603,83 +607,59 @@ INSERT INTO score_dimensions (name, description, default_weight, is_default) VAL
 ('文档编写', '技术文档和使用说明', 10.00, 1),
 ('答辩表现', '项目汇报和现场答辩', 15.00, 1);
 
--- 权限
+-- 权限（精简版，只包含核心权限）
 INSERT INTO permissions (name, display_name, resource, action, description) VALUES
 ('user:view', '查看用户', 'user', 'view', '查看用户列表'),
 ('user:create', '创建用户', 'user', 'create', '创建新用户'),
 ('user:edit', '编辑用户', 'user', 'edit', '编辑用户信息'),
-('user:delete', '删除用户', 'user', 'delete', '删除用户'),
-('role:view', '查看角色', 'role', 'view', '查看角色列表'),
-('role:create', '创建角色', 'role', 'create', '创建新角色'),
-('role:edit', '编辑角色', 'role', 'edit', '编辑角色'),
-('role:delete', '删除角色', 'role', 'delete', '删除角色'),
-('role:assign', '分配角色', 'role', 'assign', '分配用户角色'),
 ('project:view', '查看项目', 'project', 'view', '查看项目'),
 ('project:create', '创建项目', 'project', 'create', '创建新项目'),
 ('project:edit', '编辑项目', 'project', 'edit', '编辑项目'),
 ('project:delete', '删除项目', 'project', 'delete', '删除项目'),
-('project:manage', '管理项目', 'project', 'manage', '管理项目全流程'),
-('topic:view', '查看题目', 'topic', 'view', '查看题目'),
-('topic:create', '创建题目', 'topic', 'create', '创建新题目'),
-('topic:edit', '编辑题目', 'topic', 'edit', '编辑题目'),
-('topic:delete', '删除题目', 'topic', 'delete', '删除题目'),
 ('group:view', '查看分组', 'group', 'view', '查看分组'),
 ('group:create', '创建分组', 'group', 'create', '创建分组'),
 ('group:edit', '编辑分组', 'group', 'edit', '编辑分组'),
-('group:delete', '删除分组', 'group', 'delete', '删除分组'),
-('group:approve', '审核分组', 'group', 'approve', '审核分组申请'),
 ('progress:view', '查看进度', 'progress', 'view', '查看进度'),
 ('progress:submit', '提交进度', 'progress', 'submit', '提交进度'),
 ('progress:approve', '审核进度', 'progress', 'approve', '审核进度'),
 ('document:view', '查看文档', 'document', 'view', '查看文档'),
 ('document:upload', '上传文档', 'document', 'upload', '上传文档'),
-('document:delete', '删除文档', 'document', 'delete', '删除文档'),
 ('score:view', '查看成绩', 'score', 'view', '查看成绩'),
 ('score:submit', '提交评分', 'score', 'submit', '提交评分'),
-('score:config', '配置评分', 'score', 'config', '配置评分规则'),
 ('defense:view', '查看答辩', 'defense', 'view', '查看答辩安排'),
 ('defense:schedule', '安排答辩', 'defense', 'schedule', '安排答辩'),
-('defense:score', '答辩评分', 'defense', 'score', '答辩评分'),
 ('workload:view', '查看工作量', 'workload', 'view', '查看工作量'),
 ('workload:submit', '填写工作量', 'workload', 'submit', '填写工作量'),
-('workload:verify', '审核工作量', 'workload', 'verify', '审核工作量'),
-('export:project', '导出项目', 'export', 'project', '导出项目清单'),
-('export:group', '导出分组', 'export', 'group', '导出分组表'),
-('export:score', '导出成绩', 'export', 'score', '导出成绩表'),
-('class:view', '查看班级', 'class', 'view', '查看班级'),
-('class:create', '创建班级', 'class', 'create', '创建班级'),
-('class:edit', '编辑班级', 'class', 'edit', '编辑班级'),
-('class:import', '导入学生', 'class', 'import', '导入学生'),
-('menu:view', '查看菜单', 'menu', 'view', '查看菜单'),
-('menu:create', '创建菜单', 'menu', 'create', '创建菜单'),
-('menu:edit', '编辑菜单', 'menu', 'edit', '编辑菜单'),
-('menu:delete', '删除菜单', 'menu', 'delete', '删除菜单');
+('announcement:view', '查看公告', 'announcement', 'view', '查看公告'),
+('announcement:create', '创建公告', 'announcement', 'create', '创建公告');
 
--- 角色权限关联
+-- 角色权限关联（使用子查询避免硬编码 ID）
 -- Admin: 全部权限
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT 1, id FROM permissions;
+SELECT r.id, p.id FROM roles r, permissions p WHERE r.name = 'admin';
 
--- Teacher: 项目/题目/分组/进度/文档/评分/答辩/工作量/导出
+-- Teacher: 项目/分组/进度/文档/评分/答辩/工作量相关
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT 2, id FROM permissions WHERE name LIKE 'project:%'
-    OR name LIKE 'topic:%'
-    OR name LIKE 'group:%'
-    OR name LIKE 'progress:%'
-    OR name LIKE 'document:%'
-    OR name LIKE 'score:%'
-    OR name LIKE 'defense:%'
-    OR name LIKE 'workload:%'
-    OR name LIKE 'export:%';
+SELECT r.id, p.id FROM roles r, permissions p 
+WHERE r.name = 'teacher' 
+AND p.name IN ('project:view', 'project:create', 'project:edit', 'project:delete',
+    'group:view', 'group:create', 'group:edit',
+    'progress:view', 'progress:approve',
+    'document:view', 'document:upload',
+    'score:view', 'score:submit',
+    'defense:view', 'defense:schedule',
+    'workload:view', 'workload:submit',
+    'announcement:view', 'announcement:create');
 
--- Student: 查看类 + 提交/创建/编辑类
+-- Student: 查看 + 提交
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT 3, id FROM permissions WHERE name LIKE '%:view'
-    OR name = 'group:create'
-    OR name = 'group:edit'
-    OR name = 'progress:submit'
-    OR name = 'document:upload'
-    OR name = 'workload:submit';
+SELECT r.id, p.id FROM roles r, permissions p 
+WHERE r.name = 'student' 
+AND p.name IN ('project:view', 'group:view', 'group:create',
+    'progress:view', 'progress:submit',
+    'document:view', 'document:upload',
+    'score:view', 'defense:view', 'workload:view', 'workload:submit',
+    'announcement:view');
 
 -- 专业
 INSERT INTO majors (code, name, department, description) VALUES
@@ -696,7 +676,7 @@ INSERT INTO classes (major_id, grade, class_no, name, student_count) VALUES
 (2, 2024, 2, '软工24-2班', 23),
 (3, 2024, 1, '人工智能24-1班', 18);
 
--- 题目
+-- 题目（creator_id 为 NULL，创建用户后手动更新）
 INSERT INTO topics (title, description, requirements, difficulty, estimated_days, tech_stack, max_group_size, min_group_size, status) VALUES
 ('电商平台开发', '基于Spring Boot + Vue的电商平台，包含商品管理、订单系统、支付功能等', '完成商品管理、订单系统、支付功能、用户权限模块', 3, 90, '["Java","Spring Boot","Vue","MySQL"]', 4, 2, 1),
 ('图书管理系统', '基于Node.js的图书借阅管理系统，支持图书检索、借阅、归还等功能', '完成图书CRUD、借阅归还流程、检索功能', 2, 60, '["Node.js","Express","React","MongoDB"]', 3, 2, 1),
@@ -706,14 +686,10 @@ INSERT INTO topics (title, description, requirements, difficulty, estimated_days
 ('实验室预约系统', '实验室设备和场地预约管理系统', '完成设备预约、场地预约、审批流程', 2, 60, '["Java","Spring Boot","React","MySQL"]', 5, 2, 1);
 
 -- =====================================================
--- 注意：用户数据需要通过 Supabase Auth 创建
--- 请使用下面的脚本或手动在 Supabase Dashboard 中创建用户
--- 然后执行 seed-users.sql 来关联角色和班级
+-- 说明：以下数据需要在创建用户后执行 seed-users.sql
+-- - 用户角色关联
+-- - 学生班级关联
+-- - 项目数据
+-- - 分组数据
+-- - 进度/评分/答辩/工作量数据
 -- =====================================================
-
--- 公告（不依赖具体用户 ID，创建后手动更新 publisher_id）
-INSERT INTO announcements (title, content, type, priority, target_roles, status, published_at) VALUES
-('实训项目启动通知', '各位同学，实训项目正式启动，请大家尽快完成组队和选题。', 1, 1, '["admin","teacher","student"]', 1, NOW()),
-('项目进度提交截止日期提醒', '请各位组长注意，第一阶段进度提交截止日期为3月15日。', 3, 2, '["teacher","student"]', 1, NOW()),
-('答辩安排通知', '项目答辩将于6月25日至6月30日进行，请各组做好准备。', 1, 1, '["teacher","student"]', 1, NOW()),
-('关于规范文档格式的通知', '请各位同学按照模板规范编写文档，确保格式统一。', 1, 0, '["student"]', 1, NOW());

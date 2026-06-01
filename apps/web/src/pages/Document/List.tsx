@@ -1,4 +1,4 @@
-import { Card, Table, Tag, Button, Space, Upload, Modal, Form, Input, Select, message, Dropdown, Progress as AntProgress } from 'antd'
+﻿import { Card, Table, Tag, Button, Space, Upload, Modal, Form, Input, Select, message, Dropdown, Progress as AntProgress } from 'antd'
 import { FolderOutlined, FileOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, ShareAltOutlined, MoreOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { UploadProps } from 'antd'
@@ -116,13 +116,12 @@ export default function DocumentList() {
 
   const handleDownload = async (record: DocumentRecord) => {
     try {
-      const blob = await downloadDocument(record.id)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = record.name
-      a.click()
-      URL.revokeObjectURL(url)
+      const res = await downloadDocument(record.id)
+      if (res.code === 200 && res.data?.url) {
+        window.open(res.data.url, '_blank')
+      } else {
+        message.error('下载失败：无法获取文件链接')
+      }
     } catch (error) {
       message.error('下载失败')
     }

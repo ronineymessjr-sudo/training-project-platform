@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Card, Descriptions, Avatar, Button, Form, Input, message, Row, Col, Space } from 'antd'
 import { UserOutlined, EditOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../stores/auth.store'
@@ -15,7 +15,7 @@ export default function Profile() {
       updateUser(values)
       message.success('个人信息更新成功')
       setEditing(false)
-    } catch {}
+    } catch { console.error('Operation failed') }
   }
 
   return (
@@ -90,9 +90,9 @@ export default function Profile() {
           layout="vertical"
           onFinish={async (values) => {
             try {
-              await authApi.changePassword(values.oldPassword, values.newPassword)
+              await authApi.changePassword(values.newPassword)
               message.success('密码修改成功')
-            } catch {}
+            } catch { console.error('Operation failed') }
           }}
         >
           <Row gutter={16}>

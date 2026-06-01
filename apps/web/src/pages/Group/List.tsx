@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, InputNumber, message, Drawer } from 'antd'
 import { PlusOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -25,8 +25,7 @@ export default function GroupList() {
         list: resData.list || [],
         total: resData.total || 0,
       })
-    } catch {
-    } finally {
+    } catch { console.error('API call failed') } finally {
       setLoading(false)
     }
   }
@@ -38,16 +37,16 @@ export default function GroupList() {
   const handleCreate = async (values: any) => {
     try {
       await groupApi.create(values)
-      message.success('分组创建成功')
+      message.success('���鴴���ɹ�')
       setCreateModalVisible(false)
       form.resetFields()
       fetchData()
-    } catch {}
+    } catch { console.error('Operation failed') }
   }
 
   const columns = [
     {
-      title: '分组名称',
+      title: '��������',
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: Group) => (
@@ -55,17 +54,17 @@ export default function GroupList() {
       ),
     },
     {
-      title: '所属项目',
+      title: '������Ŀ',
       dataIndex: 'projectName',
       key: 'projectName',
     },
     {
-      title: '组长',
+      title: '�鳤',
       dataIndex: 'leaderName',
       key: 'leaderName',
     },
     {
-      title: '成员数',
+      title: '��Ա��',
       dataIndex: 'memberCount',
       key: 'memberCount',
       render: (count: number, record: Group) => (
@@ -73,20 +72,20 @@ export default function GroupList() {
       ),
     },
     {
-      title: '状态',
+      title: '״̬',
       dataIndex: 'status',
       key: 'status',
       render: (status: number) => {
         const statusMap: Record<number, { color: string; text: string }> = {
-          0: { color: 'error', text: '已解散' },
-          1: { color: 'success', text: '正常' },
+          0: { color: 'error', text: '�ѽ�ɢ' },
+          1: { color: 'success', text: '����' },
         }
         const { color, text } = statusMap[status] || statusMap[1]
         return <Tag color={color}>{text}</Tag>
       },
     },
     {
-      title: '操作',
+      title: '����',
       key: 'action',
       render: (_: any, record: Group) => (
         <Space>
@@ -95,7 +94,7 @@ export default function GroupList() {
             size="small"
             onClick={() => navigate(`/groups/${record.id}`)}
           >
-            查看
+            �鿴
           </Button>
         </Space>
       ),
@@ -110,7 +109,7 @@ export default function GroupList() {
             <Col>
               <Space>
                 <Input.Search
-                  placeholder="搜索分组名称"
+                  placeholder="������������"
                   allowClear
                   style={{ width: 200 }}
                   onSearch={(value) => {
@@ -126,7 +125,7 @@ export default function GroupList() {
                 icon={<PlusOutlined />}
                 onClick={() => setCreateModalVisible(true)}
               >
-                创建分组
+                ��������
               </Button>
             </Col>
           </Row>
@@ -142,13 +141,13 @@ export default function GroupList() {
             pageSize: 10,
             total: data.total,
             onChange: setPage,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => `�� ${total} ��`,
           }}
         />
       </Card>
 
       <Modal
-        title="创建分组"
+        title="��������"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         onOk={() => form.submit()}
@@ -160,30 +159,30 @@ export default function GroupList() {
         >
           <Form.Item
             name="projectId"
-            label="所属项目"
-            rules={[{ required: true, message: '请选择项目' }]}
+            label="������Ŀ"
+            rules={[{ required: true, message: '��ѡ����Ŀ' }]}
           >
-            <Input type="number" placeholder="请输入项目ID" />
+            <Input type="number" placeholder="��������ĿID" />
           </Form.Item>
 
           <Form.Item
             name="name"
-            label="分组名称"
-            rules={[{ required: true, message: '请输入分组名称' }]}
+            label="��������"
+            rules={[{ required: true, message: '�������������' }]}
           >
-            <Input placeholder="请输入分组名称" />
+            <Input placeholder="�������������" />
           </Form.Item>
 
           <Form.Item
             name="description"
-            label="分组描述"
+            label="��������"
           >
-            <Input.TextArea rows={3} placeholder="请输入分组描述" />
+            <Input.TextArea rows={3} placeholder="�������������" />
           </Form.Item>
 
           <Form.Item
             name="maxMembers"
-            label="最大成员数"
+            label="����Ա��"
             initialValue={4}
           >
             <InputNumber min={2} max={10} style={{ width: '100%' }} />

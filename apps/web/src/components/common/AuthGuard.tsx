@@ -1,18 +1,29 @@
-import { Navigate, Outlet } from 'react-router-dom'
+﻿import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth.store'
+import { message } from 'antd'
 import type { ReactNode } from 'react'
 
 interface AuthGuardProps {
   children?: ReactNode
+  roles?: string[]  // 允许访问的角色列表，为空则不限制角色
 }
 
-export default function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useAuthStore()
+export default function AuthGuard({ children, roles }: AuthGuardProps) {
+  const { isAuthenticated, isLoading, user } = useAuthStore()
+  const location = useLocation()
 
   if (isLoading) {
     return null
   }
 
-  // 演示模式：未认证时也允许通过
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (roles && roles.length > 0 && user && !roles.some(r => user.roles.includes(r))) {
+    message.warning('您没有权限访问该页面')
+    return <Navigate to="/dashboard" replace />
+  }
+
   return <>{children || <Outlet />}</>
 }

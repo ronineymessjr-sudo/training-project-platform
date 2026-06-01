@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { handleAuthError } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { handleAuthError } from '../utils/supabase-helpers'
 
 export interface UserProfile {
   id: string

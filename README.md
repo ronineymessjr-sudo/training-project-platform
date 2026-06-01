@@ -1,15 +1,12 @@
-# 实训项目全过程管理平台
+﻿# 实训项目全过程管理平台
 
 一个完整的实训项目全过程管理平台，支持学生、教师、管理员三种角色，实现组队、选题、进度提交、文档管理、答辩评分、成绩统计等功能。
 
 ## 技术栈
 
-- **前端**: React 18 + TypeScript + Ant Design + Vite
-- **后端**: Node.js + Express + TypeScript
-- **数据库**: MySQL 8.0
-- **缓存**: Redis
-- **文件存储**: MinIO
-- **部署**: Docker + Docker Compose
+- **前端**: React 18 + TypeScript + Ant Design + Vite + Zustand
+- **后端/数据库**: Supabase（PostgreSQL + Auth + Storage + RLS）
+- **CI/CD**: GitHub Actions → GitHub Pages
 
 ## 项目结构
 
@@ -17,12 +14,13 @@
 training-project-platform/
 ├── apps/
 │   ├── web/              # Web 前端 (React + Ant Design)
-│   ├── server/           # 后端 API (Express)
+│   ├── server/           # 原 Express 后端（保留参考，不再使用）
 │   └── miniapp/          # 微信小程序 (uni-app)
+├── supabase/
+│   ├── schema.sql        # 建表 + RLS + Storage
+│   └── seed-users.sql    # 用户种子数据
 ├── packages/
 │   └── shared/           # 共享类型定义
-├── docker/
-│   └── docker-compose.yml
 └── package.json
 ```
 
@@ -31,181 +29,102 @@ training-project-platform/
 ### 1. 环境要求
 
 - Node.js 18+
-- Docker & Docker Compose
-- pnpm (推荐)
+- pnpm（推荐）或 npm
 
 ### 2. 安装依赖
 
 ```bash
 # 在项目根目录执行
 pnpm install
+
+# 或进入 web 目录单独安装
+cd apps/web && npm install
 ```
 
-### 3. 启动数据库
+### 3. 配置 Supabase
+
+1. 在 [Supabase](https://supabase.com/dashboard) 创建项目
+2. 在 SQL Editor 中执行 `supabase/schema.sql`
+3. 创建 11 个测试用户（详见 DEPLOY.md）
+4. 执行 `supabase/seed-users.sql` 关联角色
+
+### 4. 配置环境变量
 
 ```bash
-# 启动 MySQL、Redis、MinIO
-docker-compose -f docker/docker-compose.yml up -d
+cp apps/web/.env.example apps/web/.env
 ```
 
-### 4. 初始化数据库
+编辑 `apps/web/.env`，填入 Supabase 连接信息：
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 5. 启动开发服务器
 
 ```bash
-# 进入后端目录
-cd apps/server
-
-# 执行数据库迁移
-npm run db:migrate
-
-# 插入测试数据
-npm run db:seed
+cd apps/web && npm run dev
 ```
 
-### 5. 启动服务
-
-```bash
-# 启动后端 (在 apps/server 目录)
-npm run dev
-
-# 启动前端 (在 apps/web 目录)
-npm run dev
-```
-
-### 6. 访问系统
-
-- Web 端: http://localhost:5173
-- 后端 API: http://localhost:3000
-- API 文档: http://localhost:3000/api
+访问 http://localhost:5173
 
 ## 测试账号
 
-| 角色 | 账号 | 密码 |
+| 角色 | 邮箱 | 密码 |
 |------|------|------|
-| 管理员 | admin | admin123 |
-| 教师 | teacher001 | teacher123 |
-| 学生 | student001 | student123 |
+| 管理员 | admin@training.com | password123 |
+| 教师 | teacher1@training.com | password123 |
+| 学生 | student1@training.com | password123 |
 
 ## 功能模块
 
 ### 学生端
-- 📋 项目列表查看
-- 👥 小组管理（创建/加入/退出）
-- 📝 进度提交
-- 📄 文档上传/下载
-- 🏆 成绩查看
-- 📅 答辩安排查看
+- 项目列表查看
+- 小组管理（创建/加入/退出）
+- 进度提交
+- 文档上传/下载
+- 成绩查询
+- 答辩安排查看
 
 ### 教师端
-- 📊 项目管理
-- 👨‍🏫 指导小组管理
-- ✅ 进度审核
-- 📝 评分管理
-- 📅 答辩安排
-- 📈 工作量审核
+- 项目管理
+- 指导小组管理
+- 进度审核
+- 评分管理
+- 答辩安排
+- 工作量审核
 
 ### 管理员端
-- 👤 用户管理
-- 🏫 班级/专业管理
-- 📢 公告管理
-- 📊 数据统计
-- 📥 数据导出 (Excel/PDF/Word)
-
-## 数据库迁移
-
-```bash
-# 执行所有迁移
-npm run db:migrate
-
-# 插入测试数据
-npm run db:seed
-
-# 重置数据库（删除所有表并重新迁移）
-npm run db:reset
-```
-
-## API 接口
-
-### 认证
-- `POST /api/v1/auth/login` - 登录
-- `POST /api/v1/auth/register` - 注册
-- `GET /api/v1/auth/me` - 获取当前用户
-- `POST /api/v1/auth/logout` - 退出登录
-
-### 项目
-- `GET /api/v1/projects` - 项目列表
-- `GET /api/v1/projects/:id` - 项目详情
-- `POST /api/v1/projects` - 创建项目
-- `PUT /api/v1/projects/:id` - 更新项目
-- `DELETE /api/v1/projects/:id` - 删除项目
-
-### 分组
-- `GET /api/v1/groups` - 分组列表
-- `GET /api/v1/groups/:id` - 分组详情
-- `POST /api/v1/groups` - 创建分组
-- `PUT /api/v1/groups/:id` - 更新分组
-- `POST /api/v1/groups/:id/members` - 添加成员
-
-### 进度
-- `GET /api/v1/progress` - 进度列表
-- `POST /api/v1/progress` - 提交进度
-- `PUT /api/v1/progress/:id/review` - 审核进度
-
-### 文档
-- `GET /api/v1/documents` - 文档列表
-- `POST /api/v1/documents` - 上传文档
-- `GET /api/v1/documents/:id/download` - 下载文档
-
-### 评分
-- `GET /api/v1/scores` - 成绩列表
-- `POST /api/v1/scores` - 提交评分
-- `GET /api/v1/scores/statistics` - 成绩统计
-
-### 答辩
-- `GET /api/v1/defenses` - 答辩列表
-- `POST /api/v1/defenses` - 安排答辩
-- `POST /api/v1/defenses/:id/score` - 答辩评分
+- 用户管理
+- 班级/专业管理
+- 公告管理
+- 数据统计
+- 数据导出
 
 ## 部署
 
-### Docker 部署
+参考 [DEPLOY.md](DEPLOY.md) 完成以下步骤：
+
+1. 在 Supabase 创建项目
+2. 执行 schema.sql 建表
+3. 创建 11 个测试用户
+4. 执行 seed-users.sql 关联数据
+5. 配置 GitHub Secrets
+6. 推 main 分支触发 Pages
+
+## 测试
 
 ```bash
-# 构建并启动所有服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
+cd apps/web
+npm test        # 运行测试
+npm run test:watch  # 监视模式
 ```
 
-### 生产环境配置
-
-1. 修改 `.env` 文件中的配置
-2. 设置强密码
-3. 配置 HTTPS
-4. 配置反向代理 (Nginx)
-
-## 开发指南
-
-### 添加新功能
-
-1. 后端：在 `apps/server/src/routes/` 添加路由
-2. 后端：在 `apps/server/src/database/migrations/` 添加迁移
-3. 前端：在 `apps/web/src/pages/` 添加页面
-4. 前端：在 `apps/web/src/api/` 添加 API 调用
-
-### 代码规范
+## 代码规范
 
 - 使用 ESLint 进行代码检查
 - 使用 TypeScript 严格模式
-- 遵循 RESTful API 设计规范
 
-## 许可证
+## 许可协议
 
 MIT
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！

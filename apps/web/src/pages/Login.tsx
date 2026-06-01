@@ -1,9 +1,9 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Form, Input, Button, Card, message } from 'antd'
 import { MailOutlined, LockOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../stores/auth.store'
-import { handleAuthError } from '../utils/request'
+import { handleAuthError } from '../utils/supabase-helpers'
 
 export default function Login() {
   const navigate = useNavigate()

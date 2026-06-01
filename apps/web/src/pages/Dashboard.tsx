@@ -1,4 +1,4 @@
-import { Card, Row, Col, Statistic, Table, Tag, Space, Button, Progress } from 'antd'
+﻿import { Card, Row, Col, Statistic, Table, Tag, Space, Button, Empty } from 'antd'
 import {
   ProjectOutlined,
   TeamOutlined,
@@ -60,9 +60,8 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // 获取项目列表
       const projectRes = await getProjectList({ myOnly: !isTeacher })
-      if (projectRes.data && projectRes.data.list && projectRes.data.list.length > 0) {
+      if (projectRes.data?.list) {
         setRecentProjects((projectRes.data.list as any[]).slice(0, 5).map(p => ({
           id: p.id,
           name: p.name,
@@ -70,61 +69,25 @@ export default function Dashboard() {
           progress: p.progress || 0,
           deadline: p.end_date || p.deadline || '',
         })))
-        setStats(s => ({ ...s, projectCount: projectRes.data.total }))
-      } else {
-        // 使用模拟数据
-        setRecentProjects(mockProjects)
-        setStats(s => ({ ...s, projectCount: mockProjects.length }))
+        setStats(s => ({ ...s, projectCount: projectRes.data.total || projectRes.data.list.length }))
       }
 
-      // 获取分组列表
       const groupRes = await getGroupList()
-      if (groupRes.data && groupRes.data.list && groupRes.data.list.length > 0) {
+      if (groupRes.data?.list) {
         setMyGroups((groupRes.data.list as any[]).slice(0, 5).map(g => ({
           id: g.id,
           name: g.name,
           memberCount: g.memberCount || 0,
           projectName: g.projectName || '',
         })))
-        setStats(s => ({ ...s, groupCount: groupRes.data.total }))
-      } else {
-        // 使用模拟数据
-        setMyGroups(mockGroups)
-        setStats(s => ({ ...s, groupCount: mockGroups.length }))
+        setStats(s => ({ ...s, groupCount: groupRes.data.total || groupRes.data.list.length }))
       }
-
-      // 模拟待办任务数
-      setStats(s => ({ ...s, pendingTaskCount: 3, completedTaskCount: 8 }))
     } catch (error) {
-      console.error('获取仪表盘数据失败，使用模拟数据', error)
-      // 使用模拟数据
-      setRecentProjects(mockProjects)
-      setMyGroups(mockGroups)
-      setStats({
-        projectCount: mockProjects.length,
-        groupCount: mockGroups.length,
-        pendingTaskCount: 3,
-        completedTaskCount: 8,
-      })
+      console.error('获取仪表盘数据失败', error)
     } finally {
       setLoading(false)
     }
   }
-
-  // 模拟数据 - 用于演示
-  const mockProjects: ProjectSummary[] = [
-    { id: 1, name: '电商平台开发', status: 'in_progress', progress: 65, deadline: '2026-06-15' },
-    { id: 2, name: '图书管理系统', status: 'pending', progress: 0, deadline: '2026-06-20' },
-    { id: 3, name: '在线考试系统', status: 'submitted', progress: 100, deadline: '2026-05-30' },
-    { id: 4, name: '智能问答机器人', status: 'in_progress', progress: 45, deadline: '2026-06-25' },
-  ]
-
-  const mockGroups: GroupSummary[] = [
-    { id: 1, name: '第一组-电商先锋', memberCount: 4, projectName: '电商平台开发' },
-    { id: 2, name: '第二组-购物达人', memberCount: 3, projectName: '电商平台开发' },
-    { id: 3, name: '第一组-书香阁', memberCount: 3, projectName: '图书管理系统' },
-    { id: 4, name: '第一组-考试通', memberCount: 4, projectName: '在线考试系统' },
-  ]
 
   const projectColumns: ColumnsType<ProjectSummary> = [
     {
@@ -150,13 +113,6 @@ export default function Dashboard() {
         }
         return <Tag color={map[status]?.color}>{map[status]?.text || status}</Tag>
       },
-    },
-    {
-      title: '进度',
-      dataIndex: 'progress',
-      key: 'progress',
-      width: 150,
-      render: (progress: number) => <Progress percent={progress} size="small" />,
     },
   ]
 
@@ -186,7 +142,6 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card loading={loading}>
@@ -231,7 +186,6 @@ export default function Dashboard() {
       </Row>
 
       <Row gutter={16}>
-        {/* 最近项目 */}
         <Col span={14}>
           <Card
             title="最近项目"
@@ -241,17 +195,20 @@ export default function Dashboard() {
               </Button>
             }
           >
-            <Table
-              columns={projectColumns}
-              dataSource={recentProjects}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
+            {recentProjects.length > 0 ? (
+              <Table
+                columns={projectColumns}
+                dataSource={recentProjects}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            ) : (
+              <Empty description="暂无项目数据" />
+            )}
           </Card>
         </Col>
 
-        {/* 我的小组 */}
         <Col span={10}>
           <Card
             title="我的小组"
@@ -261,18 +218,21 @@ export default function Dashboard() {
               </Button>
             }
           >
-            <Table
-              columns={groupColumns}
-              dataSource={myGroups}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
+            {myGroups.length > 0 ? (
+              <Table
+                columns={groupColumns}
+                dataSource={myGroups}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            ) : (
+              <Empty description="暂无小组数据" />
+            )}
           </Card>
         </Col>
       </Row>
 
-      {/* 快捷入口 */}
       <Row gutter={16} style={{ marginTop: 24 }}>
         <Col span={24}>
           <Card title="快捷入口">

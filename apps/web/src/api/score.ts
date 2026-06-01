@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 // API 响应类型
 interface ApiResponse<T> {
@@ -67,7 +67,7 @@ export const getScoreConfig = async (): Promise<ApiResponse<ScoreConfig[]>> => {
     .from('score_configs')
     .select('*')
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取项目评分
@@ -151,7 +151,7 @@ export const getMyScoreTasks = async (params?: {
 
   const result = await query
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     response.data = (response.data as any[])?.map((item: any) => ({
@@ -191,7 +191,7 @@ export const submitGuideScore = async (data: {
       comment: data.comment,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 提交评阅教师评分
@@ -218,7 +218,7 @@ export const submitReviewScore = async (data: {
       comment: data.comment,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取答辩评分
@@ -228,7 +228,7 @@ export const getDefenseScores = async (defenseId: number): Promise<ApiResponse<D
     .select('*')
     .eq('defense_id', defenseId)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 提交答辩评分
@@ -260,7 +260,7 @@ export const submitDefenseScore = async (data: {
       overall_comment: data.overallComment,
     })
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 更新评分（截止日期前）
@@ -278,7 +278,7 @@ export const updateScore = async (
     .update(updateData)
     .eq('id', scoreId)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取学生成绩单
@@ -302,7 +302,7 @@ export const getTranscript = async (studentId?: string): Promise<ApiResponse<{
     .select('*, projects(name)')
     .eq('teacher_id', userId)
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const scores = response.data as any[]

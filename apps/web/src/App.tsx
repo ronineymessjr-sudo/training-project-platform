@@ -1,4 +1,4 @@
-import { useRoutes } from 'react-router-dom'
+﻿import { useRoutes } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Spin } from 'antd'
 import { useAuthStore } from './stores/auth.store'
@@ -7,6 +7,7 @@ import './App.css'
 
 function App() {
   const { checkAuth, isLoading } = useAuthStore()
+  const element = useRoutes(routes)
 
   useEffect(() => {
     checkAuth()
@@ -24,8 +25,6 @@ function App() {
       </div>
     )
   }
-
-  const element = useRoutes(routes)
 
   return element
 }

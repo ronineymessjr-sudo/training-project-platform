@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 // API 响应类型
 interface ApiResponse<T> {
@@ -59,7 +59,7 @@ export const getMyWorkload = async (params?: {
   query = query.order('date', { ascending: false })
 
   const result = await query
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取项目成员工作量（组长/教师）
@@ -71,7 +71,7 @@ export const getProjectWorkload = async (
     .select('*, profiles(real_name)')
     .eq('project_id', projectId)
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const records = response.data as any[]
@@ -130,7 +130,7 @@ export const submitWorkload = async (data: {
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 更新工作量
@@ -151,7 +151,7 @@ export const updateWorkload = async (
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 删除工作量
@@ -161,7 +161,7 @@ export const deleteWorkload = async (id: number): Promise<ApiResponse<void>> => 
     .delete()
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取工作量统计
@@ -182,7 +182,7 @@ export const getWorkloadStatistics = async (
     .select('*, profiles(real_name)')
     .eq('project_id', projectId)
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const records = response.data as any[]
@@ -230,7 +230,7 @@ export const exportWorkloadReport = async (projectId: number): Promise<ApiRespon
     .select('*, profiles(real_name)')
     .eq('project_id', projectId)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 审核工作量（教师）
@@ -249,7 +249,7 @@ export const reviewWorkload = async (
     })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取待审核工作量（教师）
@@ -259,7 +259,7 @@ export const getPendingWorkloadReviews = async (): Promise<ApiResponse<WorkloadR
     .select('*, profiles(real_name)')
     .eq('status', 'pending')
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     response.data = (response.data as any[])?.map((item: any) => ({

@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 // API 响应类型
 interface ApiResponse<T> {
@@ -73,7 +73,7 @@ export const getDocumentList = async (params?: {
   query = query.range(from, to).order('created_at', { ascending: false })
 
   const result = await query
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     response.data = {
@@ -93,13 +93,13 @@ export const getDocumentDetail = async (id: number): Promise<ApiResponse<Documen
     .eq('id', id)
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 上传文档
 export const uploadDocument = async (data: FormData): Promise<ApiResponse<DocumentUpload>> => {
   const file = data.get('file') as File
-  const projectId = data.get('project_id') as string
+  const projectId = data.get('projectId') as string
   const folderId = data.get('folder_id') as string
 
   if (!file) {
@@ -184,7 +184,7 @@ export const createFolder = async (data: {
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 更新文档信息
@@ -203,7 +203,7 @@ export const updateDocument = async (
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 移动文档
@@ -216,7 +216,7 @@ export const moveDocument = async (
     .update({ folder_id: targetFolderId })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 删除文档
@@ -245,7 +245,7 @@ export const deleteDocument = async (id: number): Promise<ApiResponse<void>> => 
     .delete()
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 批量删除
@@ -255,7 +255,7 @@ export const batchDeleteDocuments = async (ids: number[]): Promise<ApiResponse<v
     .delete()
     .in('id', ids)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 下载文档（获取 URL）
@@ -266,7 +266,7 @@ export const downloadDocument = async (id: number): Promise<ApiResponse<{ url: s
     .eq('id', id)
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取文件夹树结构
@@ -277,7 +277,7 @@ export const getFolderTree = async (projectId: number): Promise<ApiResponse<Fold
     .eq('project_id', projectId)
     .order('name')
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 预览文档（获取URL）
@@ -288,7 +288,7 @@ export const previewDocument = async (id: number): Promise<ApiResponse<{ url: st
     .eq('id', id)
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取文档历史版本
@@ -307,7 +307,7 @@ export const getDocumentVersions = async (id: number): Promise<ApiResponse<{
     .eq('id', id)
     .order('version', { ascending: true })
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     response.data = {

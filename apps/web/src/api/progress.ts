@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import { fromSupabase } from '../utils/request'
+﻿import { supabase } from '../lib/supabase'
+import { fromSupabase } from '../utils/supabase-helpers'
 
 // API 响应类型
 interface ApiResponse<T> {
@@ -64,7 +64,7 @@ export const getProgressList = async (params?: {
   query = query.range(from, to).order('created_at', { ascending: false })
 
   const result = await query
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const list = (result.data as any[])?.map((item: any) => ({
@@ -92,7 +92,7 @@ export const getProgressDetail = async (id: number): Promise<ApiResponse<Progres
     .eq('id', id)
     .single()
 
-  const response = fromSupabase(result)
+  const response: any = fromSupabase(result)
 
   if (response.code === 200 && response.data) {
     const item = response.data as any
@@ -132,7 +132,7 @@ export const createProgress = async (data: {
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 更新进度
@@ -152,7 +152,7 @@ export const updateProgress = async (
     .select()
     .single()
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 提交进度审核
@@ -162,7 +162,7 @@ export const submitProgress = async (id: number): Promise<ApiResponse<void>> => 
     .update({ status: 'submitted', submitted_at: new Date().toISOString() })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 审核进度（教师）
@@ -185,7 +185,7 @@ export const reviewProgress = async (
     })
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 删除进度
@@ -195,7 +195,7 @@ export const deleteProgress = async (id: number): Promise<ApiResponse<void>> => 
     .delete()
     .eq('id', id)
 
-  return fromSupabase(result)
+  return fromSupabase(result) as any
 }
 
 // 获取项目所有阶段进度
@@ -213,7 +213,7 @@ export const getProjectPhases = async (projectId: number): Promise<ApiResponse<{
     .eq('project_id', projectId)
     .order('order_num', { ascending: true })
 
-  const phasesResponse = fromSupabase(phasesResult)
+  const phasesResponse: any = fromSupabase(phasesResult)
 
   if (phasesResponse.code === 200 && phasesResponse.data) {
     const phases = phasesResponse.data as any[]
