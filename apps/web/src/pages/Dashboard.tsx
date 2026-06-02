@@ -1,4 +1,4 @@
-﻿import { Card, Row, Col, Statistic, Table, Tag, Space, Button, Empty } from 'antd'
+﻿import { Card, Row, Col, Statistic, Table, Tag, Space, Button, Empty, Skeleton, message } from 'antd'
 import {
   ProjectOutlined,
   TeamOutlined,
@@ -82,8 +82,8 @@ export default function Dashboard() {
         })))
         setStats(s => ({ ...s, groupCount: groupRes.data.total || groupRes.data.list.length }))
       }
-    } catch (error) {
-      console.error('获取仪表盘数据失败', error)
+    } catch (error: any) {
+      message.error(error?.message || '获取仪表盘数据失败')
     } finally {
       setLoading(false)
     }
@@ -195,7 +195,9 @@ export default function Dashboard() {
               </Button>
             }
           >
-            {recentProjects.length > 0 ? (
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 4 }} />
+            ) : recentProjects.length > 0 ? (
               <Table
                 columns={projectColumns}
                 dataSource={recentProjects}
@@ -218,7 +220,9 @@ export default function Dashboard() {
               </Button>
             }
           >
-            {myGroups.length > 0 ? (
+            {loading ? (
+              <Skeleton active paragraph={{ rows: 4 }} />
+            ) : myGroups.length > 0 ? (
               <Table
                 columns={groupColumns}
                 dataSource={myGroups}

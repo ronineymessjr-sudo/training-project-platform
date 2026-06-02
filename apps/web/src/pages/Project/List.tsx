@@ -1,10 +1,17 @@
-﻿import { useEffect, useState } from 'react'
-import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, DatePicker, message } from 'antd'
+import { useEffect, useState } from 'react'
+import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, DatePicker, Select, message } from 'antd'
 import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectApi, Project } from '../../api/project'
+import { getClassList } from '../../api/class'
 import { useAuthStore } from '../../stores/auth.store'
 import dayjs from 'dayjs'
+
+interface ClassOption {
+  id: number
+  name: string
+  major_name?: string
+}
 
 export default function ProjectList() {
   const navigate = useNavigate()
@@ -14,6 +21,8 @@ export default function ProjectList() {
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')
   const [createModalVisible, setCreateModalVisible] = useState(false)
+  const [classOptions, setClassOptions] = useState<ClassOption[]>([])
+  const [classesLoading, setClassesLoading] = useState(false)
   const [form] = Form.useForm()
 
   const isAdmin = user?.roles.includes('admin')
@@ -22,13 +31,15 @@ export default function ProjectList() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const response: any = await projectApi.getList({ page, keyword, myOnly: !isTeacher && !isAdmin })
+      const response: any = await projectApi.getList({ page, keyword })
       const resData = response?.data?.data || {}
       setData({
         list: resData.list || [],
         total: resData.total || 0,
       })
-    } catch { console.error('API call failed') } finally {
+    } catch (error: any) {
+      message.error(error?.message || '获取项目列表失败')
+    } finally {
       setLoading(false)
     }
   }
@@ -37,6 +48,31 @@ export default function ProjectList() {
     fetchData()
   }, [page])
 
+  const fetchClasses = async () => {
+    setClassesLoading(true)
+    try {
+      const res = await getClassList({ page: 1, pageSize: 200 })
+      if (res.data?.list) {
+        setClassOptions(res.data.list.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          major_name: c.major_name,
+        })))
+      }
+    } catch (error: any) {
+      message.error(error?.message || '获取班级列表失败')
+    } finally {
+      setClassesLoading(false)
+    }
+  }
+
+  const openCreateModal = () => {
+    setCreateModalVisible(true)
+    if (classOptions.length === 0) {
+      fetchClasses()
+    }
+  }
+
   const handleCreate = async (values: any) => {
     try {
       await projectApi.create({
@@ -44,16 +80,22 @@ export default function ProjectList() {
         startDate: values.startDate?.format('YYYY-MM-DD'),
         endDate: values.endDate?.format('YYYY-MM-DD'),
       })
-      message.success('��Ŀ�����ɹ�')
+      message.success('项目创建成功')
       setCreateModalVisible(false)
       form.resetFields()
       fetchData()
-    } catch { console.error('Operation failed') }
+    } catch (error: any) {
+      if (error?.errorFields) {
+        message.error('请检查表单填写')
+      } else {
+        message.error(error?.message || '项目创建失败')
+      }
+    }
   }
 
   const columns = [
     {
-      title: '��Ŀ����',
+      title: '项目名称',
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: Project) => (
@@ -61,17 +103,17 @@ export default function ProjectList() {
       ),
     },
     {
-      title: '�༶',
+      title: '班级',
       dataIndex: 'className',
       key: 'className',
     },
     {
-      title: 'ָ����ʦ',
+      title: '指导教师',
       dataIndex: 'teacherName',
       key: 'teacherName',
     },
     {
-      title: 'ʱ��',
+      title: '时间',
       key: 'date',
       render: (_: any, record: Project) => (
         <span>
@@ -80,27 +122,27 @@ export default function ProjectList() {
       ),
     },
     {
-      title: '������',
+      title: '分组数',
       dataIndex: 'groupCount',
       key: 'groupCount',
     },
     {
-      title: '״̬',
+      title: '状态',
       dataIndex: 'status',
       key: 'status',
       render: (status: number) => {
         const statusMap: Record<number, { color: string; text: string }> = {
-          0: { color: 'default', text: 'δ��ʼ' },
-          1: { color: 'processing', text: '������' },
-          2: { color: 'success', text: '�����' },
-          3: { color: 'warning', text: '�ѹ鵵' },
+          0: { color: 'default', text: '未开始' },
+          1: { color: 'processing', text: '进行中' },
+          2: { color: 'success', text: '已完成' },
+          3: { color: 'warning', text: '已归档' },
         }
         const { color, text } = statusMap[status] || statusMap[0]
         return <Tag color={color}>{text}</Tag>
       },
     },
     {
-      title: '����',
+      title: '操作',
       key: 'action',
       render: (_: any, record: Project) => (
         <Space>
@@ -110,7 +152,7 @@ export default function ProjectList() {
             icon={<EyeOutlined />}
             onClick={() => navigate(`/projects/${record.id}`)}
           >
-            �鿴
+            查看
           </Button>
         </Space>
       ),
@@ -125,7 +167,7 @@ export default function ProjectList() {
             <Col>
               <Space>
                 <Input.Search
-                  placeholder="������Ŀ����"
+                  placeholder="搜索项目名称"
                   allowClear
                   style={{ width: 200 }}
                   onSearch={(value) => {
@@ -140,9 +182,9 @@ export default function ProjectList() {
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
-                  onClick={() => setCreateModalVisible(true)}
+                  onClick={openCreateModal}
                 >
-                  ������Ŀ
+                  创建项目
                 </Button>
               )}
             </Col>
@@ -159,13 +201,13 @@ export default function ProjectList() {
             pageSize: 10,
             total: data.total,
             onChange: setPage,
-            showTotal: (total) => `�� ${total} ��`,
+            showTotal: (total) => `共 ${total} 条`,
           }}
         />
       </Card>
 
       <Modal
-        title="������Ŀ"
+        title="创建项目"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         onOk={() => form.submit()}
@@ -177,44 +219,70 @@ export default function ProjectList() {
         >
           <Form.Item
             name="name"
-            label="��Ŀ����"
-            rules={[{ required: true, message: '��������Ŀ����' }]}
+            label="项目名称"
+            rules={[
+              { required: true, message: '请输入项目名称' },
+              { max: 100, message: '项目名称不能超过100个字符' },
+            ]}
           >
-            <Input placeholder="��������Ŀ����" />
+            <Input placeholder="请输入项目名称" maxLength={100} />
           </Form.Item>
 
           <Form.Item
             name="description"
-            label="��Ŀ����"
+            label="项目描述"
+            rules={[{ max: 500, message: '项目描述不能超过500个字符' }]}
           >
-            <Input.TextArea rows={3} placeholder="��������Ŀ����" />
+            <Input.TextArea rows={3} placeholder="请输入项目描述" maxLength={500} showCount />
           </Form.Item>
 
           <Form.Item
             name="classId"
-            label="����༶"
-            rules={[{ required: true, message: '��ѡ��༶' }]}
+            label="所属班级"
+            rules={[{ required: true, message: '请选择班级' }]}
           >
-            <Input type="number" placeholder="������༶ID" />
+            <Select
+              placeholder="请选择班级"
+              loading={classesLoading}
+              showSearch
+              optionFilterProp="label"
+              options={classOptions.map(c => ({
+                value: c.id,
+                label: c.major_name ? `${c.name} (${c.major_name})` : c.name,
+              }))}
+            />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="startDate"
-                label="��ʼ����"
-                rules={[{ required: true, message: '��ѡ��ʼ����' }]}
+                label="开始日期"
+                rules={[{ required: true, message: '请选择开始日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker style={{ width: '100%' }} placeholder="请选择开始日期" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="endDate"
-                label="��������"
-                rules={[{ required: true, message: '��ѡ���������' }]}
+                label="结束日期"
+                dependencies={['startDate']}
+                rules={[
+                  { required: true, message: '请选择结束日期' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const start = getFieldValue('startDate')
+                      if (!value || !start) return Promise.resolve()
+                      if (value.isBefore(start)) {
+                        return Promise.reject(new Error('结束日期不能早于开始日期'))
+                      }
+                      return Promise.resolve()
+                    },
+                  }),
+                ]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker style={{ width: '100%' }} placeholder="请选择结束日期" />
               </Form.Item>
             </Col>
           </Row>

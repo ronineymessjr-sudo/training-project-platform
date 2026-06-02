@@ -97,8 +97,8 @@ export default function ScoreList() {
           setData(records)
         }
       }
-    } catch (error) {
-      message.error('获取评分数据失败')
+    } catch (error: any) {
+      message.error(error?.message || '获取评分数据失败')
     } finally {
       setLoading(false)
     }
@@ -115,8 +115,8 @@ export default function ScoreList() {
           weight: d.weight || d.defaultWeight || 0,
         })))
       }
-    } catch (error) {
-      console.error('获取评分配置失败', error)
+    } catch (error: any) {
+      message.error(error?.message || '获取评分配置失败')
     }
   }
 
@@ -158,8 +158,8 @@ export default function ScoreList() {
       message.success('评分提交成功')
       setModalVisible(false)
       fetchData()
-    } catch (error) {
-      message.error('评分提交失败')
+    } catch (error: any) {
+      message.error(error?.message || '评分提交失败')
     }
   }
 

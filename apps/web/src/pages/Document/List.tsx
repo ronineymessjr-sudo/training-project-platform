@@ -66,8 +66,8 @@ export default function DocumentList() {
         setFolders(list.filter(d => d.type === 'folder'))
         setPagination(p => ({ ...p, total: res.data.total }))
       }
-    } catch (error) {
-      message.error('获取文档列表失败')
+    } catch (error: any) {
+      message.error(error?.message || '获取文档列表失败')
     } finally {
       setLoading(false)
     }
@@ -79,8 +79,8 @@ export default function DocumentList() {
       if (res.data) {
         setProjects(res.data.list.map(p => ({ id: p.id, name: p.name })))
       }
-    } catch (error) {
-      console.error('获取项目列表失败', error)
+    } catch (error: any) {
+      message.error(error?.message || '获取项目列表失败')
     }
   }
 
@@ -108,8 +108,8 @@ export default function DocumentList() {
       message.success('上传成功')
       fetchData()
       onSuccess?.({})
-    } catch (error) {
-      message.error('上传失败')
+    } catch (error: any) {
+      message.error(error?.message || '上传失败')
       onError?.(new Error('Upload failed'))
     }
   }
@@ -120,10 +120,10 @@ export default function DocumentList() {
       if (res.code === 200 && res.data?.url) {
         window.open(res.data.url, '_blank')
       } else {
-        message.error('下载失败：无法获取文件链接')
+        message.error(res?.message || '下载失败：无法获取文件链接')
       }
-    } catch (error) {
-      message.error('下载失败')
+    } catch (error: any) {
+      message.error(error?.message || '下载失败')
     }
   }
 
@@ -136,8 +136,8 @@ export default function DocumentList() {
           await deleteDocument(id)
           message.success('删除成功')
           fetchData()
-        } catch (error) {
-          message.error('删除失败')
+        } catch (error: any) {
+          message.error(error?.message || '删除失败')
         }
       },
     })
@@ -153,8 +153,8 @@ export default function DocumentList() {
           message.success('批量删除成功')
           setSelectedRowKeys([])
           fetchData()
-        } catch (error) {
-          message.error('批量删除失败')
+        } catch (error: any) {
+          message.error(error?.message || '批量删除失败')
         }
       },
     })

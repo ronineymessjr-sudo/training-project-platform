@@ -92,8 +92,11 @@ export default function Login() {
           </Form.Item>
         </Form>
 
-        <div style={{ textAlign: 'center', color: '#999', fontSize: 12 }}>
-          <p>默认账号: admin@training.com / password123</p>
+        <div style={{ textAlign: 'center', color: '#999', fontSize: 12, lineHeight: 1.8 }}>
+          <p style={{ marginBottom: 4 }}>测试账号：</p>
+          <p>管理员 admin@test.com / admin123456</p>
+          <p>教师 teacher@test.com / teacher123456</p>
+          <p>学生 student@test.com / student123456</p>
         </div>
       </Card>
     </div>

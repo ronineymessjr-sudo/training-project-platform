@@ -1,3 +1,20 @@
+# ============================================================
+# ⚠️ 已弃用 — 仅作参考
+# ============================================================
+# 本文件用于启动原 Express 后端 (apps/server) 依赖的 MySQL/Redis/MinIO。
+# 自 2026-06 起，项目已迁移到 Supabase-only 架构，不再需要本地数据库。
+# apps/server/ 目录保留为参考，但不再构建/运行。
+#
+# 当前项目的本地开发流程：
+#   1. 在 https://supabase.com 创建项目
+#   2. 在 Supabase SQL Editor 执行 supabase/schema.sql
+#   3. cp apps/web/.env.example apps/web/.env.local，填入 VITE_SUPABASE_URL / ANON_KEY
+#   4. cd apps/web && npm install && npm run dev
+#
+# 如需启动旧版本地数据库（仅供历史参考），可执行：
+#   docker-compose -f docker/docker-compose.yml up -d
+# ============================================================
+
 version: '3.8'
 
 services:

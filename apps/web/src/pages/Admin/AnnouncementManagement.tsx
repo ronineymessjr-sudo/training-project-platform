@@ -44,8 +44,8 @@ export default function AnnouncementManagement() {
         setData((res.data as any)?.list || [])
         setPagination(p => ({ ...p, total: res.data.total }))
       }
-    } catch (error) {
-      message.error('获取公告数据失败')
+    } catch (error: any) {
+      message.error(error?.message || '获取公告数据失败')
     } finally {
       setLoading(false)
     }
@@ -57,8 +57,8 @@ export default function AnnouncementManagement() {
       if (res.data) {
         setUnreadCount(res.data.count)
       }
-    } catch (error) {
-      console.error('获取未读数失败', error)
+    } catch (error: any) {
+      message.error(error?.message || '获取未读数失败')
     }
   }
 
@@ -78,8 +78,12 @@ export default function AnnouncementManagement() {
       setModalVisible(false)
       form.resetFields()
       fetchData()
-    } catch (error) {
-      message.error('创建失败')
+    } catch (error: any) {
+      if (error?.errorFields) {
+        message.error('请检查表单填写')
+      } else {
+        message.error(error?.message || '创建失败')
+      }
     }
   }
 
@@ -88,8 +92,8 @@ export default function AnnouncementManagement() {
       await publishAnnouncement(id)
       message.success('发布成功')
       fetchData()
-    } catch (error) {
-      message.error('发布失败')
+    } catch (error: any) {
+      message.error(error?.message || '发布失败')
     }
   }
 
@@ -98,8 +102,8 @@ export default function AnnouncementManagement() {
       await deleteAnnouncement(id)
       message.success('删除成功')
       fetchData()
-    } catch (error) {
-      message.error('删除失败')
+    } catch (error: any) {
+      message.error(error?.message || '删除失败')
     }
   }
 

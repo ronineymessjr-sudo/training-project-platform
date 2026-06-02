@@ -15,7 +15,9 @@ export default function Profile() {
       updateUser(values)
       message.success('个人信息更新成功')
       setEditing(false)
-    } catch { console.error('Operation failed') }
+    } catch (error: any) {
+      message.error(error?.message || '个人信息更新失败')
+    }
   }
 
   return (
@@ -92,7 +94,9 @@ export default function Profile() {
             try {
               await authApi.changePassword(values.newPassword)
               message.success('密码修改成功')
-            } catch { console.error('Operation failed') }
+            } catch (error: any) {
+              message.error(error?.message || '密码修改失败')
+            }
           }}
         >
           <Row gutter={16}>
