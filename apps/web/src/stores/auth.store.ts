@@ -21,6 +21,10 @@ interface AuthState {
   logout: () => Promise<void>
   checkAuth: () => Promise<void>
   updateUser: (user: Partial<User>) => void
+  // 角色判断getter
+  isAdmin: () => boolean
+  isTeacher: () => boolean
+  isStudent: () => boolean
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -132,6 +136,20 @@ export const useAuthStore = create<AuthState>()(
         if (currentUser) {
           set({ user: { ...currentUser, ...userData } })
         }
+      },
+
+      // 角色判断getter实现
+      isAdmin: () => {
+        const user = get().user
+        return user?.roles?.includes('admin') || user?.role === 'admin' || false
+      },
+      isTeacher: () => {
+        const user = get().user
+        return user?.roles?.includes('teacher') || user?.role === 'teacher' || false
+      },
+      isStudent: () => {
+        const user = get().user
+        return user?.roles?.includes('student') || user?.role === 'student' || false
       },
     }),
     {

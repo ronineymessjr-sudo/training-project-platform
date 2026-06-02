@@ -53,7 +53,7 @@ export default function ClassManagement() {
         setMajors(res.data.map(m => ({ id: m.id, name: m.name })))
       }
     } catch (error) {
-      console.error('获取专业列表失败', error)
+      message.error('获取专业列表失败')
     }
   }
 

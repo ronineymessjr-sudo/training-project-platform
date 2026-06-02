@@ -16,7 +16,8 @@ export default function GroupDetail() {
         .then((response: any) => {
           setGroup(response?.data?.data)
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('获取分组详情失败', error)
         })
         .finally(() => {
           setLoading(false)

@@ -95,7 +95,7 @@ export default function WorkloadList() {
         setProjects(res.data.list.map(p => ({ id: p.id, name: p.name })))
       }
     } catch (error) {
-      console.error('获取项目列表失败', error)
+      message.error('获取项目列表失败')
     }
   }
 

@@ -49,7 +49,8 @@ export default function ProjectDetail() {
             avgCompletion: progressData.stats.overall_completion || 0,
           })
         }
-      }).catch(() => {
+      }).catch((error) => {
+        console.error('获取项目详情失败', error)
       }).finally(() => {
         setLoading(false)
       })
