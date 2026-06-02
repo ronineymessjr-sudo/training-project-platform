@@ -10,6 +10,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { getProjectList } from '../api/project'
 import { getGroupList } from '../api/group'
 import { useAuthStore } from '../stores/auth.store'
@@ -48,6 +49,23 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const { user } = useAuthStore()
+
+  // 示例数据 - 项目进度概览
+  const projectProgressData = [
+    { name: '电商平台开发', progress: 65 },
+    { name: '图书管理系统', progress: 45 },
+    { name: '在线考试系统', progress: 30 },
+    { name: '智能问答机器人', progress: 20 },
+  ]
+
+  // 示例数据 - 成绩分布
+  const gradeDistributionData = [
+    { name: '优秀(90+)', value: 3 },
+    { name: '良好(80-89)', value: 5 },
+    { name: '中等(70-79)', value: 4 },
+    { name: '及格(60-69)', value: 2 },
+  ]
+  const gradeColors = ['#52c41a', '#1890ff', '#faad14', '#ff4d4f']
 
   const isTeacher = user?.role === 'teacher'
   const isAdmin = user?.role === 'admin'
@@ -182,6 +200,53 @@ export default function Dashboard() {
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
+        </Col>
+      </Row>
+
+      {/* 数据可视化图表区域 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 20 }}>
+            <h4 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>项目进度概览</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={projectProgressData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" domain={[0, 100]} unit="%" />
+                <YAxis type="category" dataKey="name" width={75} tick={{ fontSize: 13 }} />
+                <Tooltip formatter={(value) => `${value}%`} />
+                <Bar dataKey="progress" fill="#1890ff" radius={[0, 4, 4, 0]} barSize={24}>
+                  {projectProgressData.map((_, index) => (
+                    <Cell key={index} fill={`rgba(24, 144, 255, ${1 - index * 0.2})`} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Col>
+        <Col span={12}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 20 }}>
+            <h4 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>成绩分布</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={gradeDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={3}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}人`}
+                >
+                  {gradeDistributionData.map((_, index) => (
+                    <Cell key={index} fill={gradeColors[index]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </Col>
       </Row>
 

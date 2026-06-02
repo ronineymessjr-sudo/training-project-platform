@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table'
 import type { UploadProps } from 'antd'
 import { useState, useEffect } from 'react'
 import { getClassList, createClass, deleteClass, importStudents, downloadImportTemplate, getMajorList, getClassStudents, assignStudentsToClass } from '../../api/class'
+import { exportStudentList } from '../../api/export'
 
 
 const { TextArea } = Input
@@ -29,7 +30,18 @@ export default function ClassManagement() {
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedClass, setSelectedClass] = useState<ClassRecord | null>(null)
   const [classStudents, setClassStudents] = useState<Array<{ id: number; name: string; username: string }>>([])
+  const [searchText, setSearchText] = useState('')
   const [form] = Form.useForm()
+
+  const handleExportStudents = async () => {
+    try {
+      message.loading({ content: '正在导出...', key: 'export' })
+      await exportStudentList()
+      message.success({ content: '导出成功', key: 'export' })
+    } catch (error: any) {
+      message.error({ content: error?.message || '导出失败', key: 'export' })
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -217,6 +229,13 @@ export default function ClassManagement() {
         title="班级管理"
         extra={
           <Space>
+            <Input.Search
+              placeholder="搜索班级名称"
+              allowClear
+              style={{ width: 250 }}
+              onSearch={(val) => setSearchText(val)}
+              onChange={(e) => { if (!e.target.value) setSearchText('') }}
+            />
             <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
               下载模板
             </Button>
@@ -235,9 +254,10 @@ export default function ClassManagement() {
       >
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={searchText ? data.filter(d => d.name.includes(searchText)) : data}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{
             ...pagination,
             showSizeChanger: true,
@@ -259,13 +279,13 @@ export default function ClassManagement() {
         }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="班级名称" rules={[{ required: true }]}>
+          <Form.Item name="name" label="班级名称" rules={[{ required: true, message: '请输入班级名称' }]}>
             <Input placeholder="如：软件2021级1班" />
           </Form.Item>
-          <Form.Item name="majorId" label="所属专业" rules={[{ required: true }]}>
+          <Form.Item name="majorId" label="所属专业" rules={[{ required: true, message: '请选择专业' }]}>
             <Select placeholder="请选择专业" options={majors} />
           </Form.Item>
-          <Form.Item name="grade" label="年级" rules={[{ required: true }]}>
+          <Form.Item name="grade" label="年级" rules={[{ required: true, message: '请输入年级' }]}>
             <Select placeholder="请选择年级">
               {[2020, 2021, 2022, 2023, 2024].map(y => (
                 <Select.Option key={y} value={y}>{y}级</Select.Option>

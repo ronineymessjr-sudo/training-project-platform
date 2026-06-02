@@ -1,9 +1,10 @@
 import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, DatePicker, message, Statistic, Row, Col, Progress, Popover, Select } from 'antd'
-import { BarChartOutlined, UserOutlined, ClockCircleOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { BarChartOutlined, UserOutlined, ClockCircleOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
 import { getMyWorkload, submitWorkload, getProjectWorkload, reviewWorkload } from '../../api/workload'
 import { getProjectList } from '../../api/project'
+import { exportWorkloadStatistics } from '../../api/export'
 import { useAuthStore } from '../../stores/auth.store'
 import dayjs from 'dayjs'
 
@@ -41,6 +42,21 @@ export default function WorkloadList() {
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin'
   const isStudent = user?.role === 'student'
+
+  const handleExportWorkload = async () => {
+    try {
+      const currentProjectId = projects.length > 0 ? projects[0].id : 0
+      if (!currentProjectId) {
+        message.warning('暂无项目数据可导出')
+        return
+      }
+      message.loading({ content: '正在导出...', key: 'export' })
+      await exportWorkloadStatistics({ projectId: currentProjectId })
+      message.success({ content: '导出成功', key: 'export' })
+    } catch (error: any) {
+      message.error({ content: error?.message || '导出失败', key: 'export' })
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -282,11 +298,14 @@ export default function WorkloadList() {
       <Card
         title="工作量记录"
         extra={
-          isStudent && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
-              记录工时
-            </Button>
-          )
+          <Space>
+            <Button icon={<DownloadOutlined />} onClick={handleExportWorkload}>导出工作量统计</Button>
+            {isStudent && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
+                记录工时
+              </Button>
+            )}
+          </Space>
         }
       >
         <Table
@@ -294,6 +313,8 @@ export default function WorkloadList() {
           dataSource={data}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
         />
       </Card>
 
@@ -308,16 +329,16 @@ export default function WorkloadList() {
         }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="projectId" label="选择项目" rules={[{ required: true }]}>
+          <Form.Item name="projectId" label="选择项目" rules={[{ required: true, message: '请选择项目' }]}>
             <Select placeholder="请选择项目" options={projects} />
           </Form.Item>
-          <Form.Item name="date" label="工作日期" rules={[{ required: true }]}>
+          <Form.Item name="date" label="工作日期" rules={[{ required: true, message: '请选择日期' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="hours" label="工作时长（小时）" rules={[{ required: true }]}>
+          <Form.Item name="hours" label="工作时长（小时）" rules={[{ required: true, message: '请输入工时' }]}>
             <InputNumber min={0.5} max={24} step={0.5} style={{ width: 120 }} />
           </Form.Item>
-          <Form.Item name="content" label="工作内容" rules={[{ required: true }]}>
+          <Form.Item name="content" label="工作内容" rules={[{ required: true, message: '请输入工作内容' }]}>
             <TextArea rows={4} placeholder="请详细描述今天完成的工作..." />
           </Form.Item>
         </Form>

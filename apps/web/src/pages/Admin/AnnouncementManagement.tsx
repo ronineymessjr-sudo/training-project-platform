@@ -31,6 +31,7 @@ export default function AnnouncementManagement() {
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRecord | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [searchText, setSearchText] = useState('')
   const [form] = Form.useForm()
   const { user } = useAuthStore()
 
@@ -218,18 +219,28 @@ export default function AnnouncementManagement() {
           </Space>
         }
         extra={
-          isAdmin && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
-              发布公告
-            </Button>
-          )
+          <Space>
+            <Input.Search
+              placeholder="搜索公告标题"
+              allowClear
+              style={{ width: 250 }}
+              onSearch={(val) => setSearchText(val)}
+              onChange={(e) => { if (!e.target.value) setSearchText('') }}
+            />
+            {isAdmin && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
+                发布公告
+              </Button>
+            )}
+          </Space>
         }
       >
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={searchText ? data.filter(d => d.title.includes(searchText)) : data}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{
             ...pagination,
             showSizeChanger: true,
@@ -252,17 +263,17 @@ export default function AnnouncementManagement() {
         width={700}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="title" label="标题" rules={[{ required: true }]}>
+          <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入公告标题' }]}>
             <Input placeholder="请输入公告标题" />
           </Form.Item>
-          <Form.Item name="type" label="类型" rules={[{ required: true }]}>
+          <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择公告类型' }]}>
             <Select placeholder="请选择类型">
               <Select.Option value="system">系统通知</Select.Option>
               <Select.Option value="activity">活动</Select.Option>
               <Select.Option value="notice">公告</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="targetScope" label="发布范围" rules={[{ required: true }]}>
+          <Form.Item name="targetScope" label="发布范围" rules={[{ required: true, message: '请选择目标范围' }]}>
             <Select placeholder="请选择发布范围">
               <Select.Option value="all">全部</Select.Option>
               <Select.Option value="students">学生</Select.Option>
@@ -274,7 +285,7 @@ export default function AnnouncementManagement() {
               <Input type="checkbox" /> 置顶
             </Space>
           </Form.Item>
-          <Form.Item name="content" label="内容" rules={[{ required: true }]}>
+          <Form.Item name="content" label="内容" rules={[{ required: true, message: '请输入公告内容' }]}>
             <TextArea rows={8} placeholder="请输入公告内容..." />
           </Form.Item>
         </Form>

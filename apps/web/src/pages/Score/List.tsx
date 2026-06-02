@@ -1,8 +1,9 @@
 ﻿import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, Rate, Select, message, Progress, Statistic, Row, Col } from 'antd'
-import { TrophyOutlined, StarOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { TrophyOutlined, StarOutlined, CheckCircleOutlined, ClockCircleOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
 import { getProjectScores, submitGuideScore, submitReviewScore, getScoreConfig, getMyScoreTasks } from '../../api/score'
+import { exportProjectScores } from '../../api/export'
 import { useAuthStore } from '../../stores/auth.store'
 import dayjs from 'dayjs'
 
@@ -42,6 +43,16 @@ export default function ScoreList() {
   const { user } = useAuthStore()
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin'
+
+  const handleExportScores = async () => {
+    try {
+      message.loading({ content: '正在导出...', key: 'export' })
+      await exportProjectScores()
+      message.success({ content: '导出成功', key: 'export' })
+    } catch (error: any) {
+      message.error({ content: error?.message || '导出失败', key: 'export' })
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -296,6 +307,8 @@ export default function ScoreList() {
             dataSource={tasks}
             rowKey="id"
             loading={loading}
+            scroll={{ x: 'max-content' }}
+            pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
           />
         </Card>
       ) : (
@@ -340,12 +353,13 @@ export default function ScoreList() {
         </Row>
       )}
 
-      <Card title={isTeacher ? '已完成评分' : '我的成绩'} style={{ marginTop: 16 }}>
+      <Card title={isTeacher ? '已完成评分' : '我的成绩'} extra={<Button icon={<DownloadOutlined />} onClick={handleExportScores}>导出成绩</Button>} style={{ marginTop: 16 }}>
         <Table
           columns={columns}
           dataSource={data}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
@@ -371,7 +385,7 @@ export default function ScoreList() {
               </Col>
             ))}
           </Row>
-          <Form.Item name="totalScore" label="总分" rules={[{ required: true }]}>
+          <Form.Item name="totalScore" label="总分" rules={[{ required: true, message: '请输入总分' }]}>
             <InputNumber min={0} max={100} style={{ width: 120 }} />
           </Form.Item>
           <Form.Item name="comment" label="评语">

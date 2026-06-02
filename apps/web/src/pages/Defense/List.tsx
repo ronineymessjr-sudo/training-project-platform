@@ -1,8 +1,9 @@
 import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, DatePicker, InputNumber, message, Timeline, Badge, Descriptions } from 'antd'
-import { VideoCameraOutlined, PlayCircleOutlined, StopOutlined, UserOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { VideoCameraOutlined, PlayCircleOutlined, StopOutlined, UserOutlined, ClockCircleOutlined, CheckCircleOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
 import { getDefenseList, getDefenseSchedule, startDefense, endDefense, submitDefenseScore, getMyDefense } from '../../api/defense'
+import { exportDefenseRecords } from '../../api/export'
 import { useAuthStore } from '../../stores/auth.store'
 import dayjs from 'dayjs'
 
@@ -45,6 +46,16 @@ export default function DefenseList() {
 
   const isStudent = user?.role === 'student'
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin'
+
+  const handleExportDefenseRecords = async () => {
+    try {
+      message.loading({ content: '正在导出...', key: 'export' })
+      await exportDefenseRecords()
+      message.success({ content: '导出成功', key: 'export' })
+    } catch (error: any) {
+      message.error({ content: error?.message || '导出失败', key: 'export' })
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -251,12 +262,14 @@ export default function DefenseList() {
           </Descriptions>
         </Card>
       ) : (
-        <Card title="答辩安排">
+        <Card title="答辩安排" extra={<Button icon={<DownloadOutlined />} onClick={handleExportDefenseRecords}>导出答辩记录</Button>}>
           <Table
             columns={columns}
             dataSource={data}
             rowKey="id"
             loading={loading}
+            scroll={{ x: 'max-content' }}
+            pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
           />
         </Card>
       )}
@@ -297,21 +310,21 @@ export default function DefenseList() {
             <Descriptions.Item label="学生">{selectedDefense?.studentName}</Descriptions.Item>
           </Descriptions>
           
-          <Form.Item name="presentationScore" label="答辩陈述得分 (40分)" rules={[{ required: true }]}>
+          <Form.Item name="presentationScore" label="答辩陈述得分 (40分)" rules={[{ required: true, message: '请输入答辩陈述得分' }]}>
             <InputNumber min={0} max={40} style={{ width: 120 }} />
           </Form.Item>
           <Form.Item name="presentationComment" label="陈述评语">
             <Input placeholder="简要评语" />
           </Form.Item>
-          
-          <Form.Item name="answerScore" label="问答表现得分 (40分)" rules={[{ required: true }]}>
+
+          <Form.Item name="answerScore" label="问答表现得分 (40分)" rules={[{ required: true, message: '请输入问答表现得分' }]}>
             <InputNumber min={0} max={40} style={{ width: 120 }} />
           </Form.Item>
           <Form.Item name="answerComment" label="问答评语">
             <Input placeholder="简要评语" />
           </Form.Item>
-          
-          <Form.Item name="totalScore" label="总分 (100分)" rules={[{ required: true }]}>
+
+          <Form.Item name="totalScore" label="总分 (100分)" rules={[{ required: true, message: '请输入总分' }]}>
             <InputNumber min={0} max={100} style={{ width: 120 }} />
           </Form.Item>
           

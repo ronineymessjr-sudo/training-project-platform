@@ -34,6 +34,7 @@ export default function ProgressList() {
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<ProgressRecord | null>(null)
   const [projects, setProjects] = useState<Array<{ id: number; name: string }>>([])
+  const [filterProjectId, setFilterProjectId] = useState<number | undefined>(undefined)
   const [form] = Form.useForm()
   const { user } = useAuthStore()
 
@@ -212,18 +213,29 @@ export default function ProgressList() {
       <Card
         title="进度跟踪"
         extra={
-          !isTeacher && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
-              提交进度
-            </Button>
-          )
+          <Space>
+            <Select
+              placeholder="按项目筛选"
+              allowClear
+              style={{ width: 200 }}
+              options={projects}
+              value={filterProjectId}
+              onChange={(val) => setFilterProjectId(val)}
+            />
+            {!isTeacher && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
+                提交进度
+              </Button>
+            )}
+          </Space>
         }
       >
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={filterProjectId ? data.filter(d => d.projectId === filterProjectId) : data}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{
             ...pagination,
             showSizeChanger: true,
@@ -246,10 +258,10 @@ export default function ProgressList() {
         width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="projectId" label="选择项目" rules={[{ required: true }]}>
+          <Form.Item name="projectId" label="选择项目" rules={[{ required: true, message: '请选择项目' }]}>
             <Select placeholder="请选择项目" options={projects} />
           </Form.Item>
-          <Form.Item name="phaseId" label="选择阶段" rules={[{ required: true }]}>
+          <Form.Item name="phaseId" label="选择阶段" rules={[{ required: true, message: '请选择阶段' }]}>
             <Select placeholder="请选择阶段">
               <Select.Option value={1}>需求分析</Select.Option>
               <Select.Option value={2}>系统设计</Select.Option>
@@ -257,10 +269,10 @@ export default function ProgressList() {
               <Select.Option value={4}>测试部署</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="title" label="进度标题" rules={[{ required: true }]}>
+          <Form.Item name="title" label="进度标题" rules={[{ required: true, message: '请输入进度标题' }]}>
             <Input placeholder="如：完成数据库设计文档" />
           </Form.Item>
-          <Form.Item name="content" label="进度说明" rules={[{ required: true }]}>
+          <Form.Item name="content" label="进度说明" rules={[{ required: true, message: '请输入进度内容' }]}>
             <TextArea rows={6} placeholder="详细描述本次进度的完成情况..." />
           </Form.Item>
         </Form>
