@@ -59,7 +59,7 @@ export const getGroupList = async (params?: {
 }): Promise<ApiResponse<GroupListResponse>> => {
   let query = supabase
     .from('groups')
-    .select('*, projects(name), profiles!groups_leader_id_fkey(real_name)', { count: 'exact' })
+    .select('*, projects(name), profiles:leader_id(real_name)', { count: 'exact' })
 
   if (params?.projectId) {
     query = query.eq('project_id', params.projectId)

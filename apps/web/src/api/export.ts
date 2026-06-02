@@ -76,7 +76,7 @@ export const exportDefenseRecords = async (params?: {
 export const exportWorkloadStatistics = async (params: { projectId: number; format?: ExportFormat }): Promise<Blob> => {
   const { data, error } = await supabase
     .from('workloads')
-    .select('student_id, date, hours, content, status, profile:profiles!workloads_student_id_fkey(real_name, username)')
+    .select('student_id, date, hours, content, status, profile:profiles:student_id(real_name, username)')
     .eq('project_id', params.projectId)
   if (error) throw error
   const rows = ((data as any[]) ?? []).map((r) => ({
@@ -96,7 +96,7 @@ export const exportWorkloadStatistics = async (params: { projectId: number; form
 export const exportStudentList = async (params?: { classId?: number; majorId?: number; format?: ExportFormat }): Promise<Blob> => {
   let query = supabase
     .from('student_classes')
-    .select('student_id, class_id, classes(name, major_id, majors(name)), profile:profiles!student_classes_student_id_fkey(username, real_name, email)')
+    .select('student_id, class_id, classes(name, major_id, majors(name)), profile:profiles:student_id(username, real_name, email)')
     .eq('is_current', 1)
   if (params?.classId) query = query.eq('class_id', params.classId)
   const { data, error } = await query
@@ -119,7 +119,7 @@ export const exportStudentList = async (params?: { classId?: number; majorId?: n
 export const exportProjectSummary = async (params?: { status?: string; format?: ExportFormat }): Promise<Blob> => {
   let query = supabase
     .from('projects')
-    .select('id, name, start_date, end_date, status, classes(name), profiles!projects_teacher_id_fkey(real_name)')
+    .select('id, name, start_date, end_date, status, classes(name), profiles:teacher_id(real_name)')
   if (params?.status !== undefined) query = query.eq('status', Number(params.status))
   const { data, error } = await query
   if (error) throw error
@@ -141,7 +141,7 @@ export const exportProjectSummary = async (params?: { status?: string; format?: 
 export const exportReviewComments = async (params?: { projectIds?: number[]; format?: ExportFormat }): Promise<Blob> => {
   let query = supabase
     .from('scores')
-    .select('project_id, group_id, reviewer_id, review_comment, scores(->review_comment), projects(name), profile:profiles!scores_reviewer_id_fkey(real_name)')
+    .select('project_id, group_id, reviewer_id, review_comment, scores(->review_comment), projects(name), profile:profiles:reviewer_id(real_name)')
   if (params?.projectIds?.length) query = query.in('project_id', params.projectIds)
   const { data, error } = await query
   if (error) throw error
@@ -161,7 +161,7 @@ export const exportReviewComments = async (params?: { projectIds?: number[]; for
 export const exportDocuments = async (params: { projectId: number; folderId?: number; format?: ExportFormat }): Promise<Blob> => {
   let query = supabase
     .from('documents')
-    .select('id, name, type, size, url, folder_id, uploaded_by, created_at, uploader:profiles!documents_uploaded_by_fkey(real_name, username)')
+    .select('id, name, type, size, url, folder_id, uploaded_by, created_at, uploader:profiles:uploaded_by(real_name, username)')
     .eq('project_id', params.projectId)
   if (params.folderId) query = query.eq('folder_id', params.folderId)
   const { data, error } = await query

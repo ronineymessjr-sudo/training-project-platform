@@ -42,7 +42,7 @@ export interface ProjectListResponse {
 export const getProjectList = async (params?: ProjectQuery): Promise<ApiResponse<ProjectListResponse>> => {
   let query = supabase
     .from('projects')
-    .select('*, classes(name), profiles!projects_teacher_id_fkey(real_name)', { count: 'exact' })
+    .select('*, classes(name), profiles:teacher_id(real_name)', { count: 'exact' })
 
   if (params?.classId) {
     query = query.eq('class_id', params.classId)
@@ -89,7 +89,7 @@ export const getProjectList = async (params?: ProjectQuery): Promise<ApiResponse
 export const getProjectDetail = async (id: number): Promise<ApiResponse<Project>> => {
   const result = await supabase
     .from('projects')
-    .select('*, classes(name), profiles!projects_teacher_id_fkey(real_name)')
+    .select('*, classes(name), profiles:teacher_id(real_name)')
     .eq('id', id)
     .single()
 

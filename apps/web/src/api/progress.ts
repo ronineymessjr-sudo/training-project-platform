@@ -44,7 +44,7 @@ export const getProgressList = async (params?: {
 }): Promise<ApiResponse<{ list: Progress[]; total: number }>> => {
   let query = supabase
     .from('progress')
-    .select('*, profiles!progress_reporter_id_fkey(real_name), project_phases(name)', { count: 'exact' })
+    .select('*, profiles:reporter_id(real_name), project_phases(name)', { count: 'exact' })
 
   if (params?.projectId) {
     query = query.eq('project_id', params.projectId)
@@ -88,7 +88,7 @@ export const getProgressList = async (params?: {
 export const getProgressDetail = async (id: number): Promise<ApiResponse<Progress>> => {
   const result = await supabase
     .from('progress')
-    .select('*, profiles!progress_reporter_id_fkey(real_name), project_phases(name)')
+    .select('*, profiles:reporter_id(real_name), project_phases(name)')
     .eq('id', id)
     .single()
 
