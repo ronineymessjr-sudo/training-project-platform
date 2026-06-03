@@ -121,8 +121,24 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        // Mock 模式：直接完成加载，不检查认证
+        // Mock 模式：检查 localStorage 中是否有保存的认证状态
         if (isMockMode) {
+          const stored = localStorage.getItem('auth-storage')
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored)
+              const state = parsed.state || parsed
+              if (state.isAuthenticated && state.user) {
+                set({ 
+                  isLoading: false, 
+                  isAuthenticated: true, 
+                  user: state.user, 
+                  token: state.token 
+                })
+                return
+              }
+            } catch {}
+          }
           set({ isLoading: false, isAuthenticated: false, user: null, token: null })
           return
         }
@@ -194,7 +210,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ token: state.token }),
+      partialize: (state) => isMockMode 
+        ? { token: state.token, isAuthenticated: state.isAuthenticated, user: state.user }
+        : { token: state.token },
     }
   )
 )

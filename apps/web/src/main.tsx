@@ -25,7 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ConfigProvider theme={theme} locale={zhCN}>
       <AntApp>
-        <BrowserRouter>
+        <BrowserRouter basename="/training-project-platform">
           <App />
         </BrowserRouter>
       </AntApp>
