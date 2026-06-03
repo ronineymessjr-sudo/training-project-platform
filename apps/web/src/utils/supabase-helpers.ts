@@ -1,4 +1,4 @@
-﻿import { message } from 'antd'
+﻿import { messageHolder } from './messageHolder'
 import { PostgrestError } from '@supabase/supabase-js'
 
 // API response types
@@ -36,9 +36,9 @@ export function fromSupabase<T>(result: { data: T | null; error: PostgrestError 
 // Show a toast and return a normalised error response. Use for non-auth mutations where the caller wants to surface the error to the user.
 export function handleSupabaseError(error: any): ApiResponse<null> {
   if (error?.message) {
-    message.error(error.message)
+    messageHolder.error(error.message)
   } else {
-    message.error('\u64cd\u4f5c\u5931\u8d25')
+    messageHolder.error('\u64cd\u4f5c\u5931\u8d25')
   }
   return {
     code: 500,

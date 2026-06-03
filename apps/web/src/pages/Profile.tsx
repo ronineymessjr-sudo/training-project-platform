@@ -1,8 +1,9 @@
 ﻿import { useState } from 'react'
-import { Card, Descriptions, Avatar, Button, Form, Input, message, Row, Col, Space } from 'antd'
+import { Card, Descriptions, Avatar, Button, Form, Input, Row, Col, Space } from 'antd'
 import { UserOutlined, EditOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../stores/auth.store'
 import { authApi } from '../api/auth'
+import { messageHolder } from '../utils/messageHolder'
 
 export default function Profile() {
   const { user, updateUser } = useAuthStore()
@@ -13,10 +14,10 @@ export default function Profile() {
     try {
       // In production, call API to update user
       updateUser(values)
-      message.success('个人信息更新成功')
+      messageHolder.success('个人信息更新成功')
       setEditing(false)
     } catch (error: any) {
-      message.error(error?.message || '个人信息更新失败')
+      messageHolder.error(error?.message || '个人信息更新失败')
     }
   }
 
@@ -93,9 +94,9 @@ export default function Profile() {
           onFinish={async (values) => {
             try {
               await authApi.changePassword(values.newPassword)
-              message.success('密码修改成功')
+              messageHolder.success('密码修改成功')
             } catch (error: any) {
-              message.error(error?.message || '密码修改失败')
+              messageHolder.error(error?.message || '密码修改失败')
             }
           }}
         >

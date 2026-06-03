@@ -1,4 +1,5 @@
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, Upload, message, Popconfirm } from 'antd'
+import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, Upload, Popconfirm } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
 import { PlusOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, TeamOutlined, UserOutlined, EditOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { UploadProps } from 'antd'
@@ -35,11 +36,11 @@ export default function ClassManagement() {
 
   const handleExportStudents = async () => {
     try {
-      message.loading({ content: '正在导出...', key: 'export' })
+      messageHolder.loading({ content: '正在导出...', key: 'export' })
       await exportStudentList()
-      message.success({ content: '导出成功', key: 'export' })
+      messageHolder.success({ content: '导出成功', key: 'export' })
     } catch (error: any) {
-      message.error({ content: error?.message || '导出失败', key: 'export' })
+      messageHolder.error({ content: error?.message || '导出失败', key: 'export' })
     }
   }
 
@@ -52,7 +53,7 @@ export default function ClassManagement() {
         setPagination(p => ({ ...p, total: res.data.total }))
       }
     } catch (error) {
-      message.error('获取班级数据失败')
+      messageHolder.error('获取班级数据失败')
     } finally {
       setLoading(false)
     }
@@ -65,7 +66,7 @@ export default function ClassManagement() {
         setMajors(res.data.map(m => ({ id: m.id, name: m.name })))
       }
     } catch (error) {
-      message.error('获取专业列表失败')
+      messageHolder.error('获取专业列表失败')
     }
   }
 
@@ -79,22 +80,22 @@ export default function ClassManagement() {
       await form.validateFields()
       const values = form.getFieldsValue()
       await createClass(values)
-      message.success('创建成功')
+      messageHolder.success('创建成功')
       setModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error) {
-      message.error('创建失败')
+      messageHolder.error('创建失败')
     }
   }
 
   const handleDelete = async (id: number) => {
     try {
       await deleteClass(id)
-      message.success('删除成功')
+      messageHolder.success('删除成功')
       fetchData()
     } catch (error) {
-      message.error('删除失败')
+      messageHolder.error('删除失败')
     }
   }
 
@@ -105,14 +106,14 @@ export default function ClassManagement() {
       const res = await importStudents(formData)
       if (res.data) {
         const result = res.data as any
-        message.success(`成功导入 ${result.successCount || 0} 名学生`)
+        messageHolder.success(`成功导入 ${result.successCount || 0} 名学生`)
         if (result.failCount > 0) {
-          message.warning(`失败 ${result.failCount} 条`)
+          messageHolder.warning(`失败 ${result.failCount} 条`)
         }
         fetchData()
       }
     } catch (error) {
-      message.error('导入失败')
+      messageHolder.error('导入失败')
     }
     return false // 阻止默认上传
   }
@@ -127,7 +128,7 @@ export default function ClassManagement() {
       a.click()
       URL.revokeObjectURL(url)
     } catch (error) {
-      message.error('下载模板失败')
+      messageHolder.error('下载模板失败')
     }
   }
 
@@ -140,7 +141,7 @@ export default function ClassManagement() {
         setClassStudents(res.data)
       }
     } catch (error) {
-      message.error('获取学生列表失败')
+      messageHolder.error('获取学生列表失败')
     }
   }
 

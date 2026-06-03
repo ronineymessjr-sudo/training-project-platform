@@ -1,6 +1,6 @@
 ﻿import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth.store'
-import { message } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
 import type { ReactNode } from 'react'
 
 interface AuthGuardProps {
@@ -21,7 +21,7 @@ export default function AuthGuard({ children, roles }: AuthGuardProps) {
   }
 
   if (roles && roles.length > 0 && user && !roles.some(r => user.roles.includes(r))) {
-    message.warning('您没有权限访问该页面')
+    messageHolder.warning('您没有权限访问该页面')
     return <Navigate to="/dashboard" replace />
   }
 

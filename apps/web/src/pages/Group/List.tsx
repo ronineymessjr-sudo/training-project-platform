@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, InputNumber, Select, message, Drawer } from 'antd'
+import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, InputNumber, Select, Drawer } from 'antd'
 import { PlusOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { groupApi, Group } from '../../api/group'
 import { getProjectList } from '../../api/project'
 import { useAuthStore } from '../../stores/auth.store'
+import { messageHolder } from '../../utils/messageHolder'
 
 interface ProjectOption {
   id: number
@@ -33,7 +34,7 @@ export default function GroupList() {
         total: resData.total || 0,
       })
     } catch (error: any) {
-      message.error(error?.message || '获取分组列表失败')
+      messageHolder.error(error?.message || '获取分组列表失败')
     } finally {
       setLoading(false)
     }
@@ -51,7 +52,7 @@ export default function GroupList() {
         setProjectOptions(res.data.list.map(p => ({ id: p.id, name: p.name })))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取项目列表失败')
+      messageHolder.error(error?.message || '获取项目列表失败')
     } finally {
       setProjectsLoading(false)
     }
@@ -67,15 +68,15 @@ export default function GroupList() {
   const handleCreate = async (values: any) => {
     try {
       await groupApi.create(values)
-      message.success('分组创建成功')
+      messageHolder.success('分组创建成功')
       setCreateModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error: any) {
       if (error?.errorFields) {
-        message.error('请检查表单填写')
+        messageHolder.error('请检查表单填写')
       } else {
-        message.error(error?.message || '分组创建失败')
+        messageHolder.error(error?.message || '分组创建失败')
       }
     }
   }

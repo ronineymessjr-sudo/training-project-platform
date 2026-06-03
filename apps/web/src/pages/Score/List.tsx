@@ -1,11 +1,17 @@
-﻿import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, Rate, Select, message, Progress, Statistic, Row, Col } from 'antd'
-import { TrophyOutlined, StarOutlined, CheckCircleOutlined, ClockCircleOutlined, DownloadOutlined } from '@ant-design/icons'
+import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, Rate, Select, Progress, Statistic, Row, Col } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
+import { TrophyOutlined, StarOutlined, CheckCircleOutlined, ClockCircleOutlined, DownloadOutlined, PieChartOutlined, BarChartOutlined, RadarChartOutlined, DashboardOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
 import { getProjectScores, submitGuideScore, submitReviewScore, getScoreConfig, getMyScoreTasks } from '../../api/score'
 import { exportProjectScores } from '../../api/export'
 import { useAuthStore } from '../../stores/auth.store'
 import dayjs from 'dayjs'
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+} from 'recharts'
 
 const { TextArea } = Input
 
@@ -44,13 +50,46 @@ export default function ScoreList() {
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin'
 
+  // 🆕 图表数据 - 评分类型占比
+  const scoreTypeData = [
+    { name: '指导评分', value: 35, color: '#1890ff' },
+    { name: '评阅评分', value: 45, color: '#722ed1' },
+    { name: '答辩评分', value: 20, color: '#faad14' },
+  ]
+
+  // 🆕 图表数据 - 分数段分布
+  const scoreDistributionData = [
+    { range: '90-100', count: 3, color: '#52c41a' },
+    { range: '80-89', count: 8, color: '#1890ff' },
+    { range: '70-79', count: 12, color: '#faad14' },
+    { range: '60-69', count: 6, color: '#ff4d4f' },
+    { range: '0-59', count: 2, color: '#d9d9d9' },
+  ]
+
+  // 🆕 图表数据 - 评分进度追踪
+  const scoreProgressData = [
+    { name: '指导评分', pending: 5, submitted: 12, approved: 8 },
+    { name: '评阅评分', pending: 8, submitted: 10, approved: 5 },
+    { name: '答辩评分', pending: 15, submitted: 3, approved: 0 },
+  ]
+
+  // 🆕 图表数据 - 评分维度雷达图
+  const dimensionRadarData = [
+    { dimension: '代码质量', score: 82 },
+    { dimension: '文档规范', score: 75 },
+    { dimension: '创新性', score: 68 },
+    { dimension: '完成度', score: 90 },
+    { dimension: '答辩表现', score: 72 },
+    { dimension: '团队协作', score: 85 },
+  ]
+
   const handleExportScores = async () => {
     try {
-      message.loading({ content: '正在导出...', key: 'export' })
+      messageHolder.loading({ content: '正在导出...', key: 'export' })
       await exportProjectScores()
-      message.success({ content: '导出成功', key: 'export' })
+      messageHolder.success({ content: '导出成功', key: 'export' })
     } catch (error: any) {
-      message.error({ content: error?.message || '导出失败', key: 'export' })
+      messageHolder.error({ content: error?.message || '导出失败', key: 'export' })
     }
   }
 
@@ -109,7 +148,7 @@ export default function ScoreList() {
         }
       }
     } catch (error: any) {
-      message.error(error?.message || '获取评分数据失败')
+      messageHolder.error(error?.message || '获取评分数据失败')
     } finally {
       setLoading(false)
     }
@@ -127,7 +166,7 @@ export default function ScoreList() {
         })))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取评分配置失败')
+      messageHolder.error(error?.message || '获取评分配置失败')
     }
   }
 
@@ -166,11 +205,11 @@ export default function ScoreList() {
         await submitReviewScore(data)
       }
       
-      message.success('评分提交成功')
+      messageHolder.success('评分提交成功')
       setModalVisible(false)
       fetchData()
     } catch (error: any) {
-      message.error(error?.message || '评分提交失败')
+      messageHolder.error(error?.message || '评分提交失败')
     }
   }
 
@@ -300,6 +339,99 @@ export default function ScoreList() {
 
   return (
     <div>
+      {/* 🆕 数据看板区域 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <PieChartOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>评分类型占比</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={scoreTypeData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={35}
+                  outerRadius={55}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {scoreTypeData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend layout="horizontal" align="center" verticalAlign="bottom" iconSize={8} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <BarChartOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>分数段分布</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={scoreDistributionData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="range" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {scoreDistributionData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <DashboardOutlined style={{ color: '#faad14', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>评分进度追踪</span>
+            </div>
+            <div style={{ padding: '8px 0' }}>
+              {scoreProgressData.map(item => (
+                <div key={item.name} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, marginBottom: 4 }}>{item.name}</div>
+                  <Progress 
+                    percent={Math.round((item.submitted + item.approved) / (item.pending + item.submitted + item.approved) * 100)} 
+                    size="small" 
+                    strokeColor={{
+                      '0%': '#faad14',
+                      '100%': '#52c41a',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <RadarChartOutlined style={{ color: '#722ed1', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>评分维度雷达图</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <RadarChart data={dimensionRadarData}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 9 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
+                <Radar name="平均得分" dataKey="score" stroke="#722ed1" fill="#722ed140" />
+                <Tooltip />
+              </RadarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 统计卡片 */}
       {isTeacher ? (
         <Card title="待评分任务">
           <Table

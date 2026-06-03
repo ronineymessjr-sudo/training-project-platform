@@ -1,4 +1,5 @@
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, DatePicker, InputNumber, message, Timeline, Badge, Descriptions } from 'antd'
+import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, DatePicker, InputNumber, Timeline, Badge, Descriptions } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
 import { VideoCameraOutlined, PlayCircleOutlined, StopOutlined, UserOutlined, ClockCircleOutlined, CheckCircleOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
@@ -49,11 +50,11 @@ export default function DefenseList() {
 
   const handleExportDefenseRecords = async () => {
     try {
-      message.loading({ content: '正在导出...', key: 'export' })
+      messageHolder.loading({ content: '正在导出...', key: 'export' })
       await exportDefenseRecords()
-      message.success({ content: '导出成功', key: 'export' })
+      messageHolder.success({ content: '导出成功', key: 'export' })
     } catch (error: any) {
-      message.error({ content: error?.message || '导出失败', key: 'export' })
+      messageHolder.error({ content: error?.message || '导出失败', key: 'export' })
     }
   }
 
@@ -93,7 +94,7 @@ export default function DefenseList() {
         }
       }
     } catch (error) {
-      message.error('获取答辩数据失败')
+      messageHolder.error('获取答辩数据失败')
     } finally {
       setLoading(false)
     }
@@ -106,20 +107,20 @@ export default function DefenseList() {
   const handleStartDefense = async (id: number) => {
     try {
       await startDefense(id)
-      message.success('答辩已开始')
+      messageHolder.success('答辩已开始')
       fetchData()
     } catch (error) {
-      message.error('操作失败')
+      messageHolder.error('操作失败')
     }
   }
 
   const handleEndDefense = async (id: number) => {
     try {
       await endDefense(id)
-      message.success('答辩已结束')
+      messageHolder.success('答辩已结束')
       fetchData()
     } catch (error) {
-      message.error('操作失败')
+      messageHolder.error('操作失败')
     }
   }
 
@@ -140,12 +141,12 @@ export default function DefenseList() {
         answerScore: values.answerScore,
         overallComment: values.overallComment,
       })
-      message.success('评分提交成功')
+      messageHolder.success('评分提交成功')
       setScoreModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error) {
-      message.error('评分提交失败')
+      messageHolder.error('评分提交失败')
     }
   }
 

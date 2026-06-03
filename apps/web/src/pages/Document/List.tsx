@@ -1,4 +1,4 @@
-﻿import { Card, Table, Tag, Button, Space, Upload, Modal, Form, Input, Select, message, Dropdown, Progress as AntProgress } from 'antd'
+﻿import { Card, Table, Tag, Button, Space, Upload, Modal, Form, Input, Select, Dropdown, Progress as AntProgress } from 'antd'
 import { FolderOutlined, FileOutlined, UploadOutlined, DownloadOutlined, DeleteOutlined, ShareAltOutlined, MoreOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { UploadProps } from 'antd'
@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { getDocumentList, uploadDocument, deleteDocument, downloadDocument, getFolderTree } from '../../api/document'
 import { getProjectList } from '../../api/project'
 import { useAuthStore } from '../../stores/auth.store'
+import { messageHolder } from '../../utils/messageHolder'
 
 const { TextArea } = Input
 
@@ -67,7 +68,7 @@ export default function DocumentList() {
         setPagination(p => ({ ...p, total: res.data.total }))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取文档列表失败')
+      messageHolder.error(error?.message || '获取文档列表失败')
     } finally {
       setLoading(false)
     }
@@ -80,7 +81,7 @@ export default function DocumentList() {
         setProjects(res.data.list.map(p => ({ id: p.id, name: p.name })))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取项目列表失败')
+      messageHolder.error(error?.message || '获取项目列表失败')
     }
   }
 
@@ -105,11 +106,11 @@ export default function DocumentList() {
 
     try {
       await uploadDocument(formData)
-      message.success('上传成功')
+      messageHolder.success('上传成功')
       fetchData()
       onSuccess?.({})
     } catch (error: any) {
-      message.error(error?.message || '上传失败')
+      messageHolder.error(error?.message || '上传失败')
       onError?.(new Error('Upload failed'))
     }
   }
@@ -120,10 +121,10 @@ export default function DocumentList() {
       if (res.code === 200 && res.data?.url) {
         window.open(res.data.url, '_blank')
       } else {
-        message.error(res?.message || '下载失败：无法获取文件链接')
+        messageHolder.error(res?.message || '下载失败：无法获取文件链接')
       }
     } catch (error: any) {
-      message.error(error?.message || '下载失败')
+      messageHolder.error(error?.message || '下载失败')
     }
   }
 
@@ -134,10 +135,10 @@ export default function DocumentList() {
       onOk: async () => {
         try {
           await deleteDocument(id)
-          message.success('删除成功')
+          messageHolder.success('删除成功')
           fetchData()
         } catch (error: any) {
-          message.error(error?.message || '删除失败')
+          messageHolder.error(error?.message || '删除失败')
         }
       },
     })
@@ -150,11 +151,11 @@ export default function DocumentList() {
       onOk: async () => {
         try {
           // await batchDeleteDocuments(selectedRowKeys as number[])
-          message.success('批量删除成功')
+          messageHolder.success('批量删除成功')
           setSelectedRowKeys([])
           fetchData()
         } catch (error: any) {
-          message.error(error?.message || '批量删除失败')
+          messageHolder.error(error?.message || '批量删除失败')
         }
       },
     })

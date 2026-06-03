@@ -1,4 +1,5 @@
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, DatePicker, message, Statistic, Row, Col, Progress, Popover, Select } from 'antd'
+import { Card, Table, Tag, Button, Space, Modal, Form, Input, InputNumber, DatePicker, Statistic, Row, Col, Progress, Popover, Select } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
 import { BarChartOutlined, UserOutlined, ClockCircleOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
@@ -47,14 +48,14 @@ export default function WorkloadList() {
     try {
       const currentProjectId = projects.length > 0 ? projects[0].id : 0
       if (!currentProjectId) {
-        message.warning('暂无项目数据可导出')
+        messageHolder.warning('暂无项目数据可导出')
         return
       }
-      message.loading({ content: '正在导出...', key: 'export' })
+      messageHolder.loading({ content: '正在导出...', key: 'export' })
       await exportWorkloadStatistics({ projectId: currentProjectId })
-      message.success({ content: '导出成功', key: 'export' })
+      messageHolder.success({ content: '导出成功', key: 'export' })
     } catch (error: any) {
-      message.error({ content: error?.message || '导出失败', key: 'export' })
+      messageHolder.error({ content: error?.message || '导出失败', key: 'export' })
     }
   }
 
@@ -98,7 +99,7 @@ export default function WorkloadList() {
         }
       }
     } catch (error) {
-      message.error('获取工作量数据失败')
+      messageHolder.error('获取工作量数据失败')
     } finally {
       setLoading(false)
     }
@@ -111,7 +112,7 @@ export default function WorkloadList() {
         setProjects(res.data.list.map(p => ({ id: p.id, name: p.name })))
       }
     } catch (error) {
-      message.error('获取项目列表失败')
+      messageHolder.error('获取项目列表失败')
     }
   }
 
@@ -130,12 +131,12 @@ export default function WorkloadList() {
         ...values,
         date: values.date.format('YYYY-MM-DD'),
       })
-      message.success('提交成功')
+      messageHolder.success('提交成功')
       setModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error) {
-      message.error('提交失败')
+      messageHolder.error('提交失败')
     }
   }
 
@@ -153,10 +154,10 @@ export default function WorkloadList() {
         const comment = (document.getElementById('reviewComment') as HTMLTextAreaElement)?.value
         try {
           await reviewWorkload(id, { approved, comment })
-          message.success(approved ? '已通过' : '已驳回')
+          messageHolder.success(approved ? '已通过' : '已驳回')
           fetchData()
         } catch (error) {
-          message.error('操作失败')
+          messageHolder.error('操作失败')
         }
       },
     })

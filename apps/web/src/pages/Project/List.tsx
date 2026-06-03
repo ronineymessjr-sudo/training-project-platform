@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, DatePicker, Select, message } from 'antd'
-import { PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons'
+import { Table, Card, Tag, Button, Input, Space, Row, Col, Modal, Form, DatePicker, Select } from 'antd'
+import { PlusOutlined, SearchOutlined, EyeOutlined, PieChartOutlined, LineChartOutlined, BarChartOutlined, RadarChartOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { projectApi, Project } from '../../api/project'
 import { getClassList } from '../../api/class'
 import { useAuthStore } from '../../stores/auth.store'
 import dayjs from 'dayjs'
+import { messageHolder } from '../../utils/messageHolder'
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
+  AreaChart, Area, CartesianGrid, XAxis, YAxis,
+  BarChart, Bar,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+} from 'recharts'
 
 interface ClassOption {
   id: number
@@ -28,6 +35,41 @@ export default function ProjectList() {
   const isAdmin = user?.roles.includes('admin')
   const isTeacher = user?.roles.includes('teacher')
 
+  // 🆕 图表数据 - 项目状态分布
+  const statusDistributionData = [
+    { name: '未开始', value: 5, color: '#d9d9d9' },
+    { name: '进行中', value: 12, color: '#1890ff' },
+    { name: '已完成', value: 8, color: '#52c41a' },
+    { name: '已归档', value: 3, color: '#faad14' },
+  ]
+
+  // 🆕 图表数据 - 项目进度趋势（面积图）
+  const progressTrendData = [
+    { week: 'W1', progress: 15 },
+    { week: 'W2', progress: 28 },
+    { week: 'W3', progress: 42 },
+    { week: 'W4', progress: 55 },
+    { week: 'W5', progress: 68 },
+    { week: 'W6', progress: 78 },
+  ]
+
+  // 🆕 图表数据 - 班级项目对比（分组柱状图）
+  const classCompareData = [
+    { class: '计算机2201', total: 8, completed: 5 },
+    { class: '计算机2202', total: 6, completed: 4 },
+    { class: '软件工程2201', total: 7, completed: 3 },
+    { class: '数据科学2201', total: 5, completed: 4 },
+  ]
+
+  // 🆕 图表数据 - 项目活跃度雷达图
+  const activityRadarData = [
+    { dimension: '文档提交', score: 85 },
+    { dimension: '进度更新', score: 72 },
+    { dimension: '小组协作', score: 68 },
+    { dimension: '答辩准备', score: 55 },
+    { dimension: '代码质量', score: 78 },
+  ]
+
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -38,7 +80,7 @@ export default function ProjectList() {
         total: resData.total || 0,
       })
     } catch (error: any) {
-      message.error(error?.message || '获取项目列表失败')
+      messageHolder.error(error?.message || '获取项目列表失败')
     } finally {
       setLoading(false)
     }
@@ -60,7 +102,7 @@ export default function ProjectList() {
         })))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取班级列表失败')
+      messageHolder.error(error?.message || '获取班级列表失败')
     } finally {
       setClassesLoading(false)
     }
@@ -80,15 +122,15 @@ export default function ProjectList() {
         startDate: values.startDate?.format('YYYY-MM-DD'),
         endDate: values.endDate?.format('YYYY-MM-DD'),
       })
-      message.success('项目创建成功')
+      messageHolder.success('项目创建成功')
       setCreateModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error: any) {
       if (error?.errorFields) {
-        message.error('请检查表单填写')
+        messageHolder.error('请检查表单填写')
       } else {
-        message.error(error?.message || '项目创建失败')
+        messageHolder.error(error?.message || '项目创建失败')
       }
     }
   }
@@ -161,6 +203,90 @@ export default function ProjectList() {
 
   return (
     <div>
+      {/* 🆕 数据看板区域 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <PieChartOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>项目状态分布</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={statusDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={35}
+                  outerRadius={55}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {statusDistributionData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend layout="horizontal" align="center" verticalAlign="bottom" iconSize={8} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <LineChartOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>进度趋势</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={progressTrendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(v) => `${v}%`} />
+                <Area type="monotone" dataKey="progress" stroke="#52c41a" fill="#52c41a40" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <BarChartOutlined style={{ color: '#faad14', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>班级项目对比</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={classCompareData} layout="vertical" barSize={12}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tick={{ fontSize: 10 }} />
+                <YAxis type="category" dataKey="class" tick={{ fontSize: 9 }} width={70} />
+                <Tooltip />
+                <Bar dataKey="total" fill="#faad14" name="总数" />
+                <Bar dataKey="completed" fill="#52c41a" name="已完成" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <RadarChartOutlined style={{ color: '#722ed1', marginRight: 8 }} />
+              <span style={{ fontWeight: 600 }}>活跃度雷达图</span>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <RadarChart data={activityRadarData}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 9 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
+                <Radar name="活跃度" dataKey="score" stroke="#722ed1" fill="#722ed140" />
+                <Tooltip />
+              </RadarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 项目列表 */}
       <Card>
         <div style={{ marginBottom: 16 }}>
           <Row justify="space-between">

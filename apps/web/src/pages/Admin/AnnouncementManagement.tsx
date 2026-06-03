@@ -1,4 +1,5 @@
-﻿import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message, Popconfirm, Tabs, Drawer, Descriptions, Badge } from 'antd'
+﻿import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, Popconfirm, Tabs, Drawer, Descriptions, Badge } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
 import { PlusOutlined, UserOutlined, LockOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
@@ -46,7 +47,7 @@ export default function AnnouncementManagement() {
         setPagination(p => ({ ...p, total: res.data.total }))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取公告数据失败')
+      messageHolder.error(error?.message || '获取公告数据失败')
     } finally {
       setLoading(false)
     }
@@ -59,7 +60,7 @@ export default function AnnouncementManagement() {
         setUnreadCount(res.data.count)
       }
     } catch (error: any) {
-      message.error(error?.message || '获取未读数失败')
+      messageHolder.error(error?.message || '获取未读数失败')
     }
   }
 
@@ -75,15 +76,15 @@ export default function AnnouncementManagement() {
       await form.validateFields()
       const values = form.getFieldsValue()
       await createAnnouncement(values)
-      message.success('创建成功')
+      messageHolder.success('创建成功')
       setModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error: any) {
       if (error?.errorFields) {
-        message.error('请检查表单填写')
+        messageHolder.error('请检查表单填写')
       } else {
-        message.error(error?.message || '创建失败')
+        messageHolder.error(error?.message || '创建失败')
       }
     }
   }
@@ -91,20 +92,20 @@ export default function AnnouncementManagement() {
   const handlePublish = async (id: number) => {
     try {
       await publishAnnouncement(id)
-      message.success('发布成功')
+      messageHolder.success('发布成功')
       fetchData()
     } catch (error: any) {
-      message.error(error?.message || '发布失败')
+      messageHolder.error(error?.message || '发布失败')
     }
   }
 
   const handleDelete = async (id: number) => {
     try {
       await deleteAnnouncement(id)
-      message.success('删除成功')
+      messageHolder.success('删除成功')
       fetchData()
     } catch (error: any) {
-      message.error(error?.message || '删除失败')
+      messageHolder.error(error?.message || '删除失败')
     }
   }
 

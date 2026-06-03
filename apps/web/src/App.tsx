@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Spin } from 'antd'
 import { useAuthStore } from './stores/auth.store'
 import routes from './router'
+import MessageHolderInit from './components/common/MessageHolderInit'
 import './App.css'
 
 function App() {
@@ -21,12 +22,19 @@ function App() {
         alignItems: 'center', 
         height: '100vh' 
       }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     )
   }
 
-  return element
+  return (
+    <>
+      <MessageHolderInit />
+      {element}
+    </>
+  )
 }
 
 export default App

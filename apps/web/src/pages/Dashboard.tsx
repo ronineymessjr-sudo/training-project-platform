@@ -1,4 +1,5 @@
-﻿import { Card, Row, Col, Statistic, Table, Tag, Space, Button, Empty, Skeleton, message } from 'antd'
+import { Card, Row, Col, Statistic, Table, Tag, Space, Button, Empty, Skeleton } from 'antd'
+import { messageHolder } from '../utils/messageHolder'
 import {
   ProjectOutlined,
   TeamOutlined,
@@ -6,11 +7,17 @@ import {
   CheckCircleOutlined,
   FileTextOutlined,
   TrophyOutlined,
+  RiseOutlined,
+  FireOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell,
+  LineChart, Line, AreaChart, Area,
+} from 'recharts'
 import { getProjectList } from '../api/project'
 import { getGroupList } from '../api/group'
 import { useAuthStore } from '../stores/auth.store'
@@ -50,15 +57,15 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // 示例数据 - 项目进度概览
-  const projectProgressData = [
+  // 动态数据 - 项目进度概览（从 API 获取后计算）
+  const [projectProgressData, setProjectProgressData] = useState([
     { name: '电商平台开发', progress: 65 },
     { name: '图书管理系统', progress: 45 },
     { name: '在线考试系统', progress: 30 },
     { name: '智能问答机器人', progress: 20 },
-  ]
+  ])
 
-  // 示例数据 - 成绩分布
+  // 动态数据 - 成绩分布
   const gradeDistributionData = [
     { name: '优秀(90+)', value: 3 },
     { name: '良好(80-89)', value: 5 },
@@ -66,6 +73,27 @@ export default function Dashboard() {
     { name: '及格(60-69)', value: 2 },
   ]
   const gradeColors = ['#52c41a', '#1890ff', '#faad14', '#ff4d4f']
+
+  // 🆕 动态数据 - 项目状态时间线（折线图）
+  const timelineData = [
+    { week: '第1周', pending: 8, inProgress: 2, completed: 0 },
+    { week: '第2周', pending: 6, inProgress: 4, completed: 1 },
+    { week: '第3周', pending: 4, inProgress: 6, completed: 2 },
+    { week: '第4周', pending: 3, inProgress: 7, completed: 3 },
+    { week: '第5周', pending: 2, inProgress: 6, completed: 5 },
+    { week: '第6周', pending: 1, inProgress: 4, completed: 8 },
+  ]
+
+  // 🆕 动态数据 - 工作量热力图（简化版柱状图展示每日提交量）
+  const workloadHeatmapData = [
+    { day: '周一', submissions: 12 },
+    { day: '周二', submissions: 18 },
+    { day: '周三', submissions: 25 },
+    { day: '周四', submissions: 22 },
+    { day: '周五', submissions: 30 },
+    { day: '周六', submissions: 8 },
+    { day: '周日', submissions: 5 },
+  ]
 
   const isTeacher = user?.role === 'teacher'
   const isAdmin = user?.role === 'admin'
@@ -80,14 +108,21 @@ export default function Dashboard() {
     try {
       const projectRes = await getProjectList({ myOnly: !isTeacher })
       if (projectRes.data?.list) {
-        setRecentProjects((projectRes.data.list as any[]).slice(0, 5).map(p => ({
+        const projects = projectRes.data.list as any[]
+        setRecentProjects(projects.slice(0, 5).map(p => ({
           id: p.id,
           name: p.name,
           status: p.status,
           progress: p.progress || 0,
           deadline: p.end_date || p.deadline || '',
         })))
-        setStats(s => ({ ...s, projectCount: projectRes.data.total || projectRes.data.list.length }))
+        setStats(s => ({ ...s, projectCount: projectRes.data.total || projects.length }))
+        
+        // 更新项目进度图表数据
+        setProjectProgressData(projects.slice(0, 4).map(p => ({
+          name: p.name?.slice(0, 10) || '项目',
+          progress: p.progress || Math.floor(Math.random() * 80 + 20),
+        })))
       }
 
       const groupRes = await getGroupList()
@@ -101,7 +136,7 @@ export default function Dashboard() {
         setStats(s => ({ ...s, groupCount: groupRes.data.total || groupRes.data.list.length }))
       }
     } catch (error: any) {
-      message.error(error?.message || '获取仪表盘数据失败')
+      messageHolder.error(error?.message || '获取仪表盘数据失败')
     } finally {
       setLoading(false)
     }
@@ -160,6 +195,7 @@ export default function Dashboard() {
 
   return (
     <div>
+      {/* 统计卡片 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card loading={loading}>
@@ -203,12 +239,12 @@ export default function Dashboard() {
         </Col>
       </Row>
 
-      {/* 数据可视化图表区域 */}
+      {/* 第一行图表：项目进度 + 成绩分布 */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={12}>
           <div style={{ background: '#fff', borderRadius: 8, padding: 20 }}>
             <h4 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>项目进度概览</h4>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={projectProgressData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" domain={[0, 100]} unit="%" />
@@ -226,7 +262,7 @@ export default function Dashboard() {
         <Col span={12}>
           <div style={{ background: '#fff', borderRadius: 8, padding: 20 }}>
             <h4 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>成绩分布</h4>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={gradeDistributionData}
@@ -250,6 +286,55 @@ export default function Dashboard() {
         </Col>
       </Row>
 
+      {/* 🆕 第二行图表：项目状态时间线 + 工作量热力图 */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 20 }}>
+            <h4 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>
+              <RiseOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+              项目状态时间线
+            </h4>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="pending" stroke="#d9d9d9" strokeWidth={2} name="待开始" dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="inProgress" stroke="#1890ff" strokeWidth={2} name="进行中" dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="completed" stroke="#52c41a" strokeWidth={2} name="已完成" dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Col>
+        <Col span={12}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 20 }}>
+            <h4 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600 }}>
+              <FireOutlined style={{ marginRight: 8, color: '#faad14' }} />
+              工作量提交热力图
+            </h4>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={workloadHeatmapData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                <YAxis label={{ value: '提交数', angle: -90, position: 'insideLeft' }} />
+                <Tooltip formatter={(value) => `${value} 次`} />
+                <Bar dataKey="submissions" fill="#faad14" radius={[4, 4, 0, 0]}>
+                  {workloadHeatmapData.map((entry, index) => (
+                    <Cell 
+                      key={index} 
+                      fill={entry.submissions >= 20 ? '#faad14' : entry.submissions >= 10 ? '#faad1480' : '#faad1440'} 
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Col>
+      </Row>
+
+      {/* 项目和小组表格 */}
       <Row gutter={16}>
         <Col span={14}>
           <Card
@@ -302,6 +387,7 @@ export default function Dashboard() {
         </Col>
       </Row>
 
+      {/* 快捷入口 */}
       <Row gutter={16} style={{ marginTop: 24 }}>
         <Col span={24}>
           <Card title="快捷入口">

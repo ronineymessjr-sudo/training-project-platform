@@ -1,4 +1,5 @@
-import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, message, Drawer, Timeline, Empty } from 'antd'
+import { Card, Table, Tag, Button, Space, Modal, Form, Input, Select, Drawer, Timeline, Empty } from 'antd'
+import { messageHolder } from '../../utils/messageHolder'
 import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
@@ -64,7 +65,7 @@ export default function ProgressList() {
         setPagination(p => ({ ...p, total: res.data.total }))
       }
     } catch (error) {
-      message.error('获取进度数据失败')
+      messageHolder.error('获取进度数据失败')
     } finally {
       setLoading(false)
     }
@@ -77,7 +78,7 @@ export default function ProgressList() {
         setProjects(res.data.list.map(p => ({ id: p.id, name: p.name })))
       }
     } catch (error) {
-      message.error('获取项目列表失败')
+      messageHolder.error('获取项目列表失败')
     }
   }
 
@@ -91,12 +92,12 @@ export default function ProgressList() {
       await form.validateFields()
       const values = form.getFieldsValue()
       await createProgress(values)
-      message.success('提交成功')
+      messageHolder.success('提交成功')
       setModalVisible(false)
       form.resetFields()
       fetchData()
     } catch (error) {
-      message.error('提交失败')
+      messageHolder.error('提交失败')
     }
   }
 
@@ -114,10 +115,10 @@ export default function ProgressList() {
         const comment = (document.getElementById('reviewComment') as HTMLTextAreaElement)?.value
         try {
           await reviewProgress(id, { status: approved ? 'approved' : 'rejected', comment })
-          message.success(approved ? '已通过' : '已驳回')
+          messageHolder.success(approved ? '已通过' : '已驳回')
           fetchData()
         } catch (error) {
-          message.error('操作失败')
+          messageHolder.error('操作失败')
         }
       },
     })
