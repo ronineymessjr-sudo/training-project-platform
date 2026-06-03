@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Training Project Platform</title>
+    <script>
+      // GitHub Pages SPA redirect using sessionStorage
+      // Takes the current URL path and stores it, then redirects to index.html
+      // where the SPA router will read it and use history.replaceState
+      const pathSegmentsToKeep = 1; // 'training-project-platform'
+      const l = window.location;
+      const pathToKeep = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
+      const redirectPath = l.pathname.slice(pathToKeep.length) + l.search + l.hash;
+      sessionStorage.redirect = redirectPath;
+      l.replace(pathToKeep + '/');
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

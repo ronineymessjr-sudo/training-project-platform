@@ -2,6 +2,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
 
+// Mock 模式：当没有真实 Supabase 配置时使用
+const isMockMode = !import.meta.env.VITE_SUPABASE_URL || 
+  import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co'
+
 export interface User {
   id: string
   username: string
@@ -36,6 +40,36 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
 
       login: async (email: string, password: string) => {
+        // Mock 模式：模拟登录成功
+        if (isMockMode) {
+          // 模拟延迟
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // 根据邮箱判断角色
+          let roles = ['student']
+          if (email.includes('admin')) {
+            roles = ['admin']
+          } else if (email.includes('teacher')) {
+            roles = ['teacher']
+          }
+          
+          const mockUser: User = {
+            id: 'mock-user-id',
+            username: email.split('@')[0],
+            realName: email.includes('admin') ? '管理员' : email.includes('teacher') ? '教师' : '学生',
+            email,
+            roles,
+            role: roles[0],
+          }
+          
+          set({
+            user: mockUser,
+            token: 'mock-token',
+            isAuthenticated: true,
+          })
+          return
+        }
+        
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -87,6 +121,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
+        // Mock 模式：直接完成加载，不检查认证
+        if (isMockMode) {
+          set({ isLoading: false, isAuthenticated: false, user: null, token: null })
+          return
+        }
+        
         try {
           const { data: { session } } = await supabase.auth.getSession()
 
