@@ -195,7 +195,7 @@ export const createGroup = async (data: {
     name: data.name,
     description: data.description,
     max_members: data.maxMembers || 5,
-    status: 0,
+    status: 1,
   }
 
   const result = await supabase
