@@ -1,29 +1,80 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Tag, List, Avatar, Space, Spin, Row, Col, Statistic, Descriptions } from 'antd'
-import { ArrowLeftOutlined, CrownOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons'
+import { Card, Button, Tag, List, Avatar, Space, Spin, Row, Col, Statistic, Descriptions, Modal } from 'antd'
+import { ArrowLeftOutlined, CrownOutlined, UserOutlined, TeamOutlined, UserAddOutlined, LogoutOutlined } from '@ant-design/icons'
 import { groupApi, Group, GroupMember } from '../../api/group'
+import { useAuthStore } from '../../stores/auth.store'
+import { supabase } from '../../lib/supabase'
+import { messageHolder } from '../../utils/messageHolder'
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [group, setGroup] = useState<Group | null>(null)
   const [loading, setLoading] = useState(true)
+  const [amMember, setAmMember] = useState(false)
+
+  const isStudent = user?.role === 'student'
+
+  const fetchGroup = async () => {
+    if (!id) return
+    setLoading(true)
+    try {
+      const response: any = await groupApi.getDetail(parseInt(id))
+      setGroup(response?.data)
+    } catch (error) {
+      console.error('获取分组详情失败', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const checkMembership = async () => {
+    if (!id || !user?.id) return
+    const { data } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', parseInt(id))
+      .eq('student_id', user.id)
+      .limit(1)
+    setAmMember(!!(data && data.length > 0))
+  }
 
   useEffect(() => {
-    if (id) {
-      groupApi.getDetail(parseInt(id))
-        .then((response: any) => {
-          setGroup(response?.data?.data)
-        })
-        .catch((error) => {
-          console.error('获取分组详情失败', error)
-        })
-        .finally(() => {
-          setLoading(false)
-        })
-    }
+    fetchGroup()
+    checkMembership()
   }, [id])
+
+  const handleJoin = async () => {
+    if (!id) return
+    try {
+      await groupApi.addMember(parseInt(id), user?.id as any)
+      messageHolder.success('已成功加入该分组')
+      setAmMember(true)
+      fetchGroup()
+    } catch (error: any) {
+      messageHolder.error(error?.message || '加入失败')
+    }
+  }
+
+  const handleLeave = async () => {
+    if (!id || !user?.id) return
+    Modal.confirm({
+      title: '确认退出',
+      content: '确定要退出该分组吗？',
+      onOk: async () => {
+        try {
+          await groupApi.removeMember(parseInt(id), user?.id as any)
+          messageHolder.success('已退出分组')
+          setAmMember(false)
+          fetchGroup()
+        } catch (error: any) {
+          messageHolder.error(error?.message || '退出失败')
+        }
+      },
+    })
+  }
 
   if (loading) {
     return (
@@ -39,11 +90,7 @@ export default function GroupDetail() {
 
   return (
     <div>
-      <Button
-        icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(-1)}
-        style={{ marginBottom: 16 }}
-      >
+      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
         返回
       </Button>
 
@@ -62,10 +109,7 @@ export default function GroupDetail() {
               <Descriptions.Item label="描述" span={2}>{group.description || '暂无描述'}</Descriptions.Item>
             </Descriptions>
           </Card>
-
-
         </Col>
-
         <Col span={8}>
           <Card>
             <Statistic
@@ -74,6 +118,18 @@ export default function GroupDetail() {
               suffix={`/ ${group.maxMembers}`}
               prefix={<TeamOutlined />}
             />
+            <div style={{ marginTop: 16 }}>
+              {isStudent && group.status === 1 && !amMember && (
+                <Button type="primary" icon={<UserAddOutlined />} block onClick={handleJoin}>
+                  加入该分组
+                </Button>
+              )}
+              {isStudent && amMember && (
+                <Button danger icon={<LogoutOutlined />} block onClick={handleLeave}>
+                  退出分组
+                </Button>
+              )}
+            </div>
           </Card>
         </Col>
       </Row>
@@ -85,8 +141,8 @@ export default function GroupDetail() {
             <List.Item>
               <List.Item.Meta
                 avatar={
-                  <Avatar 
-                    icon={<UserOutlined />} 
+                  <Avatar
+                    icon={<UserOutlined />}
                     src={member.avatarUrl}
                     style={{ background: member.role === 1 ? '#faad14' : '#1890ff' }}
                   />
@@ -96,6 +152,9 @@ export default function GroupDetail() {
                     {member.realName || member.username}
                     {member.role === 1 && (
                       <Tag icon={<CrownOutlined />} color="gold">组长</Tag>
+                    )}
+                    {(member as any).student_id === user?.id && (
+                      <Tag color="blue">我</Tag>
                     )}
                   </Space>
                 }
