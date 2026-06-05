@@ -33,9 +33,10 @@ interface ScoreTask {
   id: number
   projectId: number
   projectName: string
+  groupId: number
+  groupName: string
   studentName: string
   type: string
-  deadline: string
   status: string
 }
 
@@ -103,6 +104,39 @@ export default function ScoreList() {
         if (res.data) {
           setTasks(res.data)
         }
+        // 同时加载教师已完成的评分
+        if (user?.id) {
+          const { data: teacherScores } = await supabase
+            .from('scores')
+            .select('*, score_dimensions(name), profiles:scorer_id(real_name), projects!inner(name)')
+            .eq('scorer_id', user.id)
+          if (teacherScores) {
+            const scoreMap = new Map<string, any[]>()
+            for (const row of teacherScores) {
+              const key = `${row.project_id}-${row.group_id}`
+              if (!scoreMap.has(key)) scoreMap.set(key, [])
+              scoreMap.get(key)!.push(row)
+            }
+            const completedRecords: ScoreRecord[] = []
+            for (const [, rows] of scoreMap) {
+              const first = rows[0]
+              const total = rows.reduce((s: number, r: any) => s + (r.score || 0), 0)
+              completedRecords.push({
+                id: first.id,
+                projectId: first.project_id,
+                projectName: first.projects?.name || '',
+                studentName: '',
+                scorerName: first.profiles?.real_name || '',
+                type: 'guide',
+                totalScore: total,
+                status: 'submitted',
+                comment: first.comment || '',
+                createdAt: first.scored_at || first.created_at,
+              })
+            }
+            setData(completedRecords)
+          }
+        }
       } else {
         // 学生查看成绩 - 先查自己的项目，再查项目评分
         let projectId: number | null = null
@@ -167,8 +201,8 @@ export default function ScoreList() {
       // API 不可用时使用 Mock 后备数据
       if (isTeacher) {
         setTasks([
-          { id: 1, projectId: 1, projectName: '毕业设计管理系统', studentName: '张三', type: 'guide', deadline: new Date(Date.now() + 7 * 86400000).toISOString(), status: 'pending' },
-          { id: 2, projectId: 2, projectName: '在线学习平台', studentName: '李四', type: 'review', deadline: new Date(Date.now() + 7 * 86400000).toISOString(), status: 'pending' },
+          { id: 1, projectId: 1, projectName: '毕业设计管理系统', groupId: 1, groupName: '第一组', studentName: '张三', type: 'guide', status: 'pending' },
+          { id: 2, projectId: 2, projectName: '在线学习平台', groupId: 2, groupName: '第二组', studentName: '李四', type: 'review', status: 'pending' },
         ])
       }
     } finally {
@@ -219,6 +253,7 @@ export default function ScoreList() {
       const values = form.getFieldsValue()
       const scoreData = {
         projectId: selectedTask.projectId,
+        groupId: selectedTask.groupId,
         dimensionScores: dimensions.map(d => ({
           dimensionId: d.id,
           score: values[`score_${d.id}`],
@@ -315,7 +350,13 @@ export default function ScoreList() {
       ellipsis: true,
     },
     {
-      title: '学生姓名',
+      title: '小组名称',
+      dataIndex: 'groupName',
+      key: 'groupName',
+      width: 120,
+    },
+    {
+      title: '学生/组长',
       dataIndex: 'studentName',
       key: 'studentName',
       width: 100,
@@ -329,24 +370,8 @@ export default function ScoreList() {
         const map: Record<string, { color: string; text: string }> = {
           guide: { color: 'blue', text: '指导评分' },
           review: { color: 'purple', text: '评阅评分' },
-          defense: { color: 'orange', text: '答辩评分' },
         }
         return <Tag color={map[type]?.color}>{map[type]?.text || type}</Tag>
-      },
-    },
-    {
-      title: '截止时间',
-      dataIndex: 'deadline',
-      key: 'deadline',
-      width: 160,
-      render: (time: string) => {
-        const isOverdue = dayjs(time).isBefore(dayjs())
-        return (
-          <span style={{ color: isOverdue ? '#ff4d4f' : undefined }}>
-            {dayjs(time).format('YYYY-MM-DD HH:mm')}
-            {isOverdue && ' (已过期)'}
-          </span>
-        )
       },
     },
     {
