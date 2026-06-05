@@ -45,21 +45,39 @@ export const getMyWorkload = async (params?: {
 
   let query = supabase
     .from('workloads')
-    .select('*')
+    .select('*, projects(name)')
     .eq('student_id', user?.id)
 
   if (params?.projectId) {
     query = query.eq('project_id', params.projectId)
   }
   if (params?.month) {
-    query = query.gte('date', `${params.month}-01`)
-      .lt('date', `${params.month}-31`)
+    query = query.gte('report_date', `${params.month}-01`)
+      .lt('report_date', `${params.month}-31`)
   }
 
-  query = query.order('date', { ascending: false })
+  query = query.order('report_date', { ascending: false })
 
   const result = await query
-  return fromSupabase(result) as any
+  const response: any = fromSupabase(result)
+
+  if (response.code === 200 && Array.isArray(response.data)) {
+    response.data = response.data.map((d: any) => ({
+      id: d.id,
+      projectId: d.project_id,
+      projectName: d.projects?.name || '',
+      userId: d.student_id,
+      userName: '',
+      date: d.report_date,
+      hours: d.actual_hours || 0,
+      content: d.task_description || '',
+      status: d.status === 0 ? 'pending' : d.status === 1 ? 'approved' : d.status === 2 ? 'approved' : 'pending',
+      reviewerComment: '',
+      createdAt: d.created_at,
+    }))
+  }
+
+  return response
 }
 
 // 获取项目成员工作量（组长/教师）
@@ -256,17 +274,25 @@ export const reviewWorkload = async (
 export const getPendingWorkloadReviews = async (): Promise<ApiResponse<WorkloadRecord[]>> => {
   const result = await supabase
     .from('workloads')
-    .select('*, profiles(real_name)')
-    .eq('status', 'pending')
+    .select('*, profiles(real_name), projects(name)')
+    .eq('status', 0) // 0 = pending in DB
 
   const response: any = fromSupabase(result)
 
-  if (response.code === 200) {
-    response.data = (response.data as any[])?.map((item: any) => ({
-      ...item,
-      userName: item.profiles?.real_name,
-      profiles: undefined,
-    })) || []
+  if (response.code === 200 && Array.isArray(response.data)) {
+    response.data = response.data.map((item: any) => ({
+      id: item.id,
+      projectId: item.project_id,
+      projectName: item.projects?.name || '',
+      userId: item.student_id,
+      userName: item.profiles?.real_name || '',
+      date: item.report_date,
+      hours: item.actual_hours || 0,
+      content: item.task_description || '',
+      status: 'pending',
+      reviewerComment: item.review_comment || '',
+      createdAt: item.created_at,
+    }))
   }
 
   return response

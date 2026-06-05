@@ -44,22 +44,27 @@ export const getAnnouncementList = async (params?: {
     query = query.eq('type', params.type)
   }
 
-  // 非管理员只能看到与自己角色匹配的公告
-  if (params?.userRole && params.userRole !== 'admin') {
-    // target_roles 为 null 表示全员可见，或者包含当前角色
-    query = query.or(`target_roles.is.null,target_roles.cs.{${params.userRole}}`)
-  }
-
   const result = await query
   const response: any = fromSupabase(result)
 
   if (response.code === 200) {
+    let list = (result.data || []) as Announcement[]
+    const total = result.count || 0
+
+    // 非管理员用JS过滤角色可见性（JSONB数组不支持PostgREST的.cs操作符）
+    if (params?.userRole && params.userRole !== 'admin') {
+      list = list.filter(a => {
+        if (!a.target_roles || a.target_roles.length === 0) return true
+        return a.target_roles.includes(params.userRole!)
+      })
+    }
+
     return {
       code: 200,
       message: 'success',
       data: {
-        list: (result.data || []) as Announcement[],
-        total: result.count || 0,
+        list,
+        total,
       },
     }
   }
@@ -152,21 +157,33 @@ export const getUnreadCount = async (userRole?: string): Promise<ApiResponse<{ c
   // 已读公告ID列表
   const readIds = (await supabase.from('announcement_reads').select('announcement_id').eq('user_id', user?.id)).data?.map(r => r.announcement_id) || []
 
-  let query = supabase
+  // 获取所有已发布公告的ID和target_roles
+  const { data: rawData } = await supabase
+    .from('announcements')
+    .select('id, target_roles')
+    .eq('status', 1)
+
+  if (!rawData) return { code: 200, message: 'success', data: { count: 0 } }
+
+  // 过滤角色可见性
+  let visibleIds: number[]
+  if (userRole && userRole !== 'admin') {
+    visibleIds = rawData
+      .filter(a => !a.target_roles || a.target_roles.length === 0 || a.target_roles.includes(userRole))
+      .map(a => a.id)
+  } else {
+    visibleIds = rawData.map(a => a.id)
+  }
+
+  // 再统计未读
+  if (visibleIds.length === 0) return { code: 200, message: 'success', data: { count: 0 } }
+
+  const { count } = await supabase
     .from('announcements')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 1) // 只计已发布的
+    .in('id', visibleIds)
+    .not('id', 'in', `(${readIds.join(',')})`)
 
-  if (readIds.length > 0) {
-    query = query.not('id', 'in', `(${readIds.join(',')})`)
-  }
-
-  // 非管理员只统计自己角色能看到的
-  if (userRole && userRole !== 'admin') {
-    query = query.or(`target_roles.is.null,target_roles.cs.{${userRole}}`)
-  }
-
-  const { count } = await query
   return { code: 200, message: 'success', data: { count: count || 0 } }
 }
 

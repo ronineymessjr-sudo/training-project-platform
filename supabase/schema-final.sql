@@ -484,7 +484,25 @@ CREATE POLICY "Users can view own roles" ON user_roles FOR SELECT USING (auth.ui
 -- classes, majors, student_classes
 CREATE POLICY "Authenticated users can view majors" ON majors FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view classes" ON classes FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Teachers can create classes" ON classes FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
+CREATE POLICY "Teachers can update classes" ON classes FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
+CREATE POLICY "Teachers can delete classes" ON classes FOR DELETE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
 CREATE POLICY "Authenticated users can view student_classes" ON student_classes FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Teachers can manage student_classes" ON student_classes FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
+CREATE POLICY "Teachers can update student_classes" ON student_classes FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
+CREATE POLICY "Teachers can delete student_classes" ON student_classes FOR DELETE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
 
 -- topics
 CREATE POLICY "Authenticated users can view topics" ON topics FOR SELECT USING (auth.uid() IS NOT NULL);
@@ -503,6 +521,8 @@ CREATE POLICY "Teachers can update projects" ON projects FOR UPDATE USING (
 CREATE POLICY "Authenticated users can view groups" ON groups FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Authenticated users can view group_members" ON group_members FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Students can create groups" ON groups FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Students can manage group_members" ON group_members FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Students can update group_members" ON group_members FOR UPDATE USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Leaders can update groups" ON groups FOR UPDATE USING (
     leader_id = auth.uid() OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );
