@@ -26,6 +26,7 @@ export const getAnnouncementList = async (params?: {
   type?: number
   page?: number
   pageSize?: number
+  userRole?: string  // 当前用户角色，用于按角色过滤公告
 }): Promise<ApiResponse<{ list: Announcement[]; total: number }>> => {
   const page = params?.page || 1
   const pageSize = params?.pageSize || 10
@@ -35,11 +36,18 @@ export const getAnnouncementList = async (params?: {
   let query = supabase
     .from('announcements')
     .select('*', { count: 'exact' })
+    .eq('status', 1)  // 只查已发布的公告
     .order('created_at', { ascending: false })
     .range(from, to)
 
   if (params?.type) {
     query = query.eq('type', params.type)
+  }
+
+  // 非管理员只能看到与自己角色匹配的公告
+  if (params?.userRole && params.userRole !== 'admin') {
+    // target_roles 为 null 表示全员可见，或者包含当前角色
+    query = query.or(`target_roles.is.null,target_roles.cs.{${params.userRole}}`)
   }
 
   const result = await query
@@ -138,14 +146,27 @@ export const getAnnouncementReads = async (
 }
 
 // 获取未读公告数量
-export const getUnreadCount = async (): Promise<ApiResponse<{ count: number }>> => {
+export const getUnreadCount = async (userRole?: string): Promise<ApiResponse<{ count: number }>> => {
   const { data: { user } } = await supabase.auth.getUser()
-  const { count } = await supabase
+
+  // 已读公告ID列表
+  const readIds = (await supabase.from('announcement_reads').select('announcement_id').eq('user_id', user?.id)).data?.map(r => r.announcement_id) || []
+
+  let query = supabase
     .from('announcements')
     .select('*', { count: 'exact', head: true })
-    .not('id', 'in', (
-      await supabase.from('announcement_reads').select('announcement_id').eq('user_id', user?.id)
-    ).data?.map(r => r.announcement_id) || [])
+    .eq('status', 1) // 只计已发布的
+
+  if (readIds.length > 0) {
+    query = query.not('id', 'in', `(${readIds.join(',')})`)
+  }
+
+  // 非管理员只统计自己角色能看到的
+  if (userRole && userRole !== 'admin') {
+    query = query.or(`target_roles.is.null,target_roles.cs.{${userRole}}`)
+  }
+
+  const { count } = await query
   return { code: 200, message: 'success', data: { count: count || 0 } }
 }
 

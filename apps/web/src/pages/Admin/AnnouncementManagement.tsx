@@ -41,7 +41,7 @@ export default function AnnouncementManagement() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await getAnnouncementList({ page: pagination.current, pageSize: pagination.pageSize })
+      const res = await getAnnouncementList({ page: pagination.current, pageSize: pagination.pageSize, userRole: user?.role })
       if (res.data) {
         setData((res.data as any)?.list || [])
         setPagination(p => ({ ...p, total: res.data.total }))
@@ -55,7 +55,7 @@ export default function AnnouncementManagement() {
 
   const fetchUnreadCount = async () => {
     try {
-      const res = await getUnreadCount()
+      const res = await getUnreadCount(user?.role)
       if (res.data) {
         setUnreadCount(res.data.count)
       }
@@ -75,7 +75,19 @@ export default function AnnouncementManagement() {
     try {
       await form.validateFields()
       const values = form.getFieldsValue()
-      await createAnnouncement(values)
+      // 将 targetScope 映射为 target_roles 数组
+      const targetRolesMap: Record<string, string[] | null> = {
+        all: null,       // null = 全员可见
+        students: ['student'],
+        teachers: ['teacher', 'admin'],
+      }
+      const announcementData = {
+        title: values.title,
+        content: values.content,
+        type: values.type === 'system' ? 1 : values.type === 'activity' ? 2 : 3,
+        target_roles: targetRolesMap[values.targetScope] || null,
+      }
+      await createAnnouncement(announcementData)
       messageHolder.success('创建成功')
       setModalVisible(false)
       form.resetFields()

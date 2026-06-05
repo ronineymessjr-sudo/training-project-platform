@@ -9,6 +9,7 @@ import {
   TrophyOutlined,
   RiseOutlined,
   FireOutlined,
+  BellOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useState } from 'react'
@@ -400,6 +401,9 @@ export default function Dashboard() {
                   <Button icon={<TeamOutlined />} onClick={() => navigate('/groups')}>
                     小组管理
                   </Button>
+                  <Button icon={<BellOutlined />} onClick={() => navigate('/announcements')}>
+                    公告通知
+                  </Button>
                   <Button icon={<ClockCircleOutlined />} onClick={() => navigate('/progress')}>
                     进度提交
                   </Button>
@@ -413,6 +417,9 @@ export default function Dashboard() {
               )}
               {isTeacher && (
                 <>
+                  <Button icon={<BellOutlined />} onClick={() => navigate('/announcements')}>
+                    公告通知
+                  </Button>
                   <Button icon={<FileTextOutlined />} onClick={() => navigate('/progress')}>
                     审核进度
                   </Button>

@@ -58,8 +58,16 @@ export const getClassList = async (params?: {
 
   const result = await query
   const list = (result.data || []).map((item: any) => ({
-    ...item,
-    major_name: item.majors?.name,
+    id: item.id,
+    name: item.name,
+    majorId: item.major_id,
+    majorName: item.majors?.name || '',
+    grade: item.grade,
+    classNo: item.class_no,
+    studentCount: item.student_count || 0,
+    counselorId: item.counselor_id,
+    status: item.status,
+    createdAt: item.created_at,
   }))
 
   return {
@@ -80,35 +88,77 @@ export const getClassDetail = async (id: number): Promise<ApiResponse<any>> => {
     .eq('id', id)
     .single()
   if (result.data) {
-    result.data.major_name = (result.data as any).majors?.name
+    const item = result.data as any
+    result.data = {
+      id: item.id,
+      name: item.name,
+      majorId: item.major_id,
+      majorName: item.majors?.name || '',
+      grade: item.grade,
+      classNo: item.class_no,
+      studentCount: item.student_count || 0,
+      counselorId: item.counselor_id,
+      status: item.status,
+      createdAt: item.created_at,
+    }
   }
   return fromSupabase(result) as any
 }
 
-// 创建班级
+// 创建班级（自动转换 camelCase → snake_case，自动生成 class_no）
 export const createClass = async (data: {
   name: string
-  major_id: number
+  majorId: number
   grade: number
-  class_no: number
-  counselor_id?: string
+  classNo?: number
+  counselorId?: string
 }): Promise<ApiResponse<any>> => {
+  // 如果没有指定 class_no，自动查询同专业同年级最大班号 + 1
+  let classNo = data.classNo
+  if (!classNo) {
+    const { data: existing } = await supabase
+      .from('classes')
+      .select('class_no')
+      .eq('major_id', data.majorId)
+      .eq('grade', data.grade)
+      .order('class_no', { ascending: false })
+      .limit(1)
+    const maxNo = existing && existing.length > 0 ? existing[0].class_no : 0
+    classNo = maxNo + 1
+  }
+
+  const dbData = {
+    name: data.name,
+    major_id: data.majorId,
+    grade: data.grade,
+    class_no: classNo,
+    counselor_id: data.counselorId || null,
+    student_count: 0,
+  }
+
   const result = await supabase
     .from('classes')
-    .insert(data)
+    .insert(dbData)
     .select()
     .single()
   return fromSupabase(result) as any
 }
 
-// 更新班级
+// 更新班级（自动转换 camelCase → snake_case）
 export const updateClass = async (
   id: number,
-  data: Partial<any>
+  data: { name?: string; majorId?: number; grade?: number; classNo?: number; counselorId?: string }
 ): Promise<ApiResponse<any>> => {
+  const dbData: any = {};
+  if (data.name !== undefined) dbData.name = data.name;
+  if (data.majorId !== undefined) dbData.major_id = data.majorId;
+  if (data.grade !== undefined) dbData.grade = data.grade;
+  if (data.classNo !== undefined) dbData.class_no = data.classNo;
+  if (data.counselorId !== undefined) dbData.counselor_id = data.counselorId;
+
   const result = await supabase
     .from('classes')
-    .update(data)
+    .update(dbData)
     .eq('id', id)
     .select()
     .single()

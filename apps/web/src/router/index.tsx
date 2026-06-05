@@ -88,6 +88,10 @@ const routes: RouteObject[] = [
             element: <WorkloadList />,
           },
           {
+            path: 'announcements',
+            element: <AnnouncementManagement />,
+          },
+          {
             path: 'profile',
             element: <Profile />,
           },
@@ -98,10 +102,6 @@ const routes: RouteObject[] = [
               {
                 path: 'classes',
                 element: <ClassManagement />,
-              },
-              {
-                path: 'announcements',
-                element: <AnnouncementManagement />,
               },
             ],
           },

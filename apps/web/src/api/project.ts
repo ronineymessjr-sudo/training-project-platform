@@ -42,7 +42,7 @@ export interface ProjectListResponse {
 export const getProjectList = async (params?: ProjectQuery): Promise<ApiResponse<ProjectListResponse>> => {
   let query = supabase
     .from('projects')
-    .select('*, classes(name), profiles:teacher_id(real_name)', { count: 'exact' })
+    .select('*, classes(name)', { count: 'exact' })
 
   if (params?.classId) {
     query = query.eq('class_id', params.classId)
@@ -67,14 +67,34 @@ export const getProjectList = async (params?: ProjectQuery): Promise<ApiResponse
   const result = await query
   const response: any = fromSupabase(result)
 
-  if (response.code === 200) {
+  if (response.code === 200 && result.data) {
+    // 批量获取教师姓名（teacher_id 引用 auth.users，需通过 profiles 获取 real_name）
+    const teacherIds = [...new Set((result.data as any[]).map((item: any) => item.teacher_id))].filter(Boolean)
+    let teacherMap: Record<string, string> = {}
+    if (teacherIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, real_name')
+        .in('id', teacherIds as any)
+      if (profilesData) {
+        teacherMap = Object.fromEntries(profilesData.map((p: any) => [p.id, p.real_name || '']))
+      }
+    }
+
     // 转换字段名
     const list = (result.data as any[])?.map((item: any) => ({
-      ...item,
+      id: item.id,
+      topicId: item.topic_id,
+      name: item.name,
+      description: item.description,
+      classId: item.class_id,
+      teacherId: item.teacher_id,
+      startDate: item.start_date,
+      endDate: item.end_date,
+      status: item.status,
       className: item.classes?.name,
-      teacherName: item.profiles?.real_name,
-      classes: undefined,
-      profiles: undefined,
+      teacherName: teacherMap[item.teacher_id] || '',
+      createdAt: item.created_at,
     })) || []
 
     response.data = {
@@ -89,14 +109,25 @@ export const getProjectList = async (params?: ProjectQuery): Promise<ApiResponse
 export const getProjectDetail = async (id: number): Promise<ApiResponse<Project>> => {
   const result = await supabase
     .from('projects')
-    .select('*, classes(name), profiles:teacher_id(real_name)')
+    .select('*, classes(name)')
     .eq('id', id)
     .single()
 
   const response: any = fromSupabase(result)
 
   if (response.code === 200 && response.data) {
-    const item = response.data as any
+    const item = result.data as any
+
+    // 获取教师姓名
+    let teacherName = ''
+    if (item?.teacher_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('real_name')
+        .eq('id', item.teacher_id)
+        .single()
+      teacherName = profile?.real_name || ''
+    }
     response.data = {
       ...item,
       className: item.classes?.name,
