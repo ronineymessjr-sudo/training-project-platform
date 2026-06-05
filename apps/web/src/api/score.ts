@@ -143,7 +143,7 @@ export const getMyScoreTasks = async (params?: {
   let query = supabase
     .from('scores')
     .select('*, projects(name)')
-    .eq('teacher_id', user?.id)
+    .eq('scorer_id', user?.id)
 
   if (params?.type) {
     query = query.eq('type', params.type)
@@ -185,7 +185,7 @@ export const submitGuideScore = async (data: {
     .insert({
       project_id: data.projectId,
       type: 'guide',
-      teacher_id: user?.id,
+      scorer_id: user?.id,
       dimension_scores: data.dimensionScores,
       total_score: data.totalScore,
       comment: data.comment,
@@ -212,7 +212,7 @@ export const submitReviewScore = async (data: {
     .insert({
       project_id: data.projectId,
       type: 'review',
-      teacher_id: user?.id,
+      scorer_id: user?.id,
       dimension_scores: data.dimensionScores,
       total_score: data.totalScore,
       comment: data.comment,
@@ -300,7 +300,7 @@ export const getTranscript = async (studentId?: string): Promise<ApiResponse<{
   const result = await supabase
     .from('scores')
     .select('*, projects(name)')
-    .eq('teacher_id', userId)
+    .or(`scorer_id.eq.${userId},project_id.in.(${(await supabase.from('group_members').select('groups(project_id)').eq('student_id', userId)).data?.map((m: any) => m.groups?.project_id).filter(Boolean).join(',') || '0'})`)
 
   const response: any = fromSupabase(result)
 
