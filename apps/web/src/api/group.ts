@@ -6,7 +6,7 @@ export interface Group {
   projectId: number
   name: string
   description?: string
-  leaderId?: number
+  leaderId?: string
   leaderName?: string
   maxMembers: number
   memberCount?: number
@@ -59,7 +59,7 @@ export const getGroupList = async (params?: {
 }): Promise<ApiResponse<GroupListResponse>> => {
   let query = supabase
     .from('groups')
-    .select('*, projects(name), profiles:leader_id(real_name)', { count: 'exact' })
+    .select('*, projects(name)', { count: 'exact' })
 
   if (params?.projectId) {
     query = query.eq('project_id', params.projectId)
@@ -81,13 +81,49 @@ export const getGroupList = async (params?: {
   const result = await query
   const response: any = fromSupabase(result)
 
-  if (response.code === 200) {
-    const list = (result.data as any[])?.map((item: any) => ({
-      ...item,
-      projectName: item.projects?.name,
-      leaderName: item.profiles?.real_name,
+  if (response.code === 200 && result.data) {
+    const items = result.data as any[]
+
+    // 批量获取组长姓名
+    const leaderIds = [...new Set(items.map((item: any) => item.leader_id).filter(Boolean))]
+    let leaderMap: Record<string, string> = {}
+    if (leaderIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, real_name')
+        .in('id', leaderIds as any)
+      if (profilesData) {
+        leaderMap = Object.fromEntries(profilesData.map((p: any) => [p.id, p.real_name || '']))
+      }
+    }
+
+    // 批量获取各组的实时成员数
+    const groupIds = items.map((item: any) => item.id).filter(Boolean)
+    let memberCountMap: Record<number, number> = {}
+    if (groupIds.length > 0) {
+      // 对每个组单独count，避免 Supabase 跨表聚合问题
+      for (const gid of groupIds) {
+        const { count } = await supabase
+          .from('group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', gid)
+        if (count !== null) memberCountMap[gid] = count
+      }
+    }
+
+    const list = items.map((item: any) => ({
+      id: item.id,
+      projectId: item.project_id,
+      name: item.name,
+      description: item.description,
+      leaderId: item.leader_id,
+      leaderName: leaderMap[item.leader_id] || '',
+      maxMembers: item.max_members || 4,
+      memberCount: memberCountMap[item.id] || 0,
+      status: item.status,
+      projectName: item.projects?.name || '',
+      createdAt: item.created_at,
       projects: undefined,
-      profiles: undefined,
     })) || []
 
     response.data = {
@@ -102,7 +138,7 @@ export const getGroupList = async (params?: {
 export const getGroupDetail = async (id: number): Promise<ApiResponse<Group>> => {
   const result = await supabase
     .from('groups')
-    .select('*, group_members(*, profiles(real_name, username))')
+    .select('*, projects(name), group_members(*)')
     .eq('id', id)
     .single()
 
@@ -110,13 +146,36 @@ export const getGroupDetail = async (id: number): Promise<ApiResponse<Group>> =>
 
   if (response.code === 200 && response.data) {
     const item = response.data as any
+
+    // 批量获取成员用户信息（profiles）
+    const studentIds = [...new Set((item.group_members || []).map((gm: any) => gm.student_id).filter(Boolean))]
+    let profileMap: Record<string, { real_name: string; username: string }> = {}
+    if (studentIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, real_name, username')
+        .in('id', studentIds as any)
+      if (profilesData) {
+        profileMap = Object.fromEntries(profilesData.map((p: any) => [p.id, { real_name: p.real_name || '', username: p.username || '' }]))
+      }
+    }
+
     response.data = {
-      ...item,
+      id: item.id,
+      projectId: item.project_id,
+      name: item.name,
+      description: item.description,
+      leaderId: item.leader_id,
+      maxMembers: item.max_members,
+      memberCount: (item.group_members || []).length,
+      status: item.status,
+      projectName: item.projects?.name,
+      leaderName: '',
+      createdAt: item.created_at,
       members: item.group_members?.map((gm: any) => ({
         ...gm,
-        realName: gm.profiles?.real_name,
-        username: gm.profiles?.username,
-        profiles: undefined,
+        realName: profileMap[gm.student_id]?.real_name || '',
+        username: profileMap[gm.student_id]?.username || '',
       })) || [],
       group_members: undefined,
     } as Group
