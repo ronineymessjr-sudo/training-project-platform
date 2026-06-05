@@ -523,6 +523,7 @@ CREATE POLICY "Authenticated users can view group_members" ON group_members FOR 
 CREATE POLICY "Students can create groups" ON groups FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Students can manage group_members" ON group_members FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Students can update group_members" ON group_members FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Students can delete own group_members" ON group_members FOR DELETE USING (auth.uid() IS NOT NULL);
 CREATE POLICY "Leaders can update groups" ON groups FOR UPDATE USING (
     leader_id = auth.uid() OR EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
 );

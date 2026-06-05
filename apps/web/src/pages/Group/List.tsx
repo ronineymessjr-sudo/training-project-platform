@@ -155,19 +155,24 @@ export default function GroupList() {
 
   const handleLeaveGroup = async () => {
     if (!myGroupId) return
+    const currentGroupId = myGroupId
     Modal.confirm({
       title: '确认退出',
       content: `确定要退出「${myGroupName}」吗？`,
       onOk: async () => {
         try {
-          await groupApi.removeMember(myGroupId, user?.id as any)
-          messageHolder.success('已退出分组')
+          const res = await groupApi.removeMember(currentGroupId, user?.id as any)
+          if (res.code !== 200) {
+            messageHolder.error(res.message || '退出失败，请重试')
+            return
+          }
+          // 清除本地状态，不依赖fetchMyGroup的结果
           setMyGroupId(null)
           setMyGroupName('')
+          messageHolder.success('已退出分组')
           fetchData()
-          fetchMyGroup()
         } catch (error: any) {
-          messageHolder.error(error?.message || '退出失败')
+          messageHolder.error(error?.message || '退出失败，请重试')
         }
       },
     })

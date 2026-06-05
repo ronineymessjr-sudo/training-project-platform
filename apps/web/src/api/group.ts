@@ -253,7 +253,23 @@ export const removeGroupMember = async (groupId: number, studentId: number): Pro
     .eq('group_id', groupId)
     .eq('student_id', studentId)
 
-  return fromSupabase(result) as any
+  // 检查是否有行被实际删除（RLS可能静默拒绝）
+  if (result.error) {
+    return { code: 500, message: result.error.message, data: undefined }
+  }
+
+  // 确认删除后该成员已不存在
+  const { count } = await supabase
+    .from('group_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('group_id', groupId)
+    .eq('student_id', studentId)
+
+  if (count && count > 0) {
+    return { code: 500, message: '退出分组失败，请稍后重试', data: undefined }
+  }
+
+  return { code: 200, message: 'success', data: undefined }
 }
 
 export const applyToGroup = async (groupId: number, message?: string): Promise<ApiResponse<void>> => {

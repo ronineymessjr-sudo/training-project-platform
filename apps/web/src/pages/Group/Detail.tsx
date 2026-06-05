@@ -65,12 +65,16 @@ export default function GroupDetail() {
       content: '确定要退出该分组吗？',
       onOk: async () => {
         try {
-          await groupApi.removeMember(parseInt(id), user?.id as any)
+          const res = await groupApi.removeMember(parseInt(id), user?.id as any)
+          if (res.code !== 200) {
+            messageHolder.error(res.message || '退出失败，请重试')
+            return
+          }
           messageHolder.success('已退出分组')
           setAmMember(false)
           fetchGroup()
         } catch (error: any) {
-          messageHolder.error(error?.message || '退出失败')
+          messageHolder.error(error?.message || '退出失败，请重试')
         }
       },
     })
