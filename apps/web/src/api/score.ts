@@ -154,7 +154,7 @@ export const getProjectScores = async (projectId: number): Promise<ApiResponse<{
   // 读取 scores 表（按组+评分人聚合，每个维度一行）
   const { data: allScores, error } = await supabase
     .from('scores')
-    .select('*, score_dimensions(name), profiles:scorer_id(real_name)')
+    .select('*, score_dimensions(name)')
     .eq('project_id', projectId)
 
   if (error) {
@@ -162,6 +162,16 @@ export const getProjectScores = async (projectId: number): Promise<ApiResponse<{
       code: 500,
       message: error.message,
       data: { guideScores: [], reviewScores: [], defenseScores: [], totalScore: 0 },
+    }
+  }
+
+  // 获取评分人姓名
+  const scorerIds = [...new Set((allScores || []).map((r: any) => r.scorer_id).filter(Boolean))]
+  let scorerMap: Record<string, string> = {}
+  if (scorerIds.length > 0) {
+    const { data: profiles } = await supabase.from('profiles').select('id, real_name').in('id', scorerIds)
+    if (profiles) {
+      scorerMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.real_name || '']))
     }
   }
 
@@ -184,7 +194,7 @@ export const getProjectScores = async (projectId: number): Promise<ApiResponse<{
       projectId: first.project_id,
       groupId: first.group_id,
       scorerId: first.scorer_id,
-      scorerName: first.profiles?.real_name || '',
+      scorerName: scorerMap[first.scorer_id] || '',
       dimensionScores: rows.map((r: any) => ({
         dimensionId: r.dimension_id,
         dimensionName: r.score_dimensions?.name || '',
@@ -203,7 +213,7 @@ export const getProjectScores = async (projectId: number): Promise<ApiResponse<{
   // defense_scores
   const { data: defScores } = await supabase
     .from('defense_scores')
-    .select('*, profiles:scorer_id(real_name)')
+    .select('*')
     .eq('project_id', projectId)
 
   const defenseScores = (defScores || []).map((item: any) => ({
@@ -212,7 +222,7 @@ export const getProjectScores = async (projectId: number): Promise<ApiResponse<{
     groupId: item.group_id,
     projectId: item.project_id,
     scorerId: item.scorer_id,
-    scorerName: item.profiles?.real_name || '',
+    scorerName: scorerMap[item.scorer_id] || '',
     totalScore: item.total_score,
     presentationScore: item.presentation_score,
     qaScore: item.qa_score,

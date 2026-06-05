@@ -108,9 +108,12 @@ export default function ScoreList() {
         if (user?.id) {
           const { data: teacherScores } = await supabase
             .from('scores')
-            .select('*, score_dimensions(name), profiles:scorer_id(real_name), projects!inner(name)')
+            .select('*, score_dimensions(name), projects!inner(name)')
             .eq('scorer_id', user.id)
           if (teacherScores) {
+            // 获取评分人姓名
+            const { data: profiles } = await supabase.from('profiles').select('id, real_name').eq('id', user.id)
+            const myName = profiles?.[0]?.real_name || ''
             const scoreMap = new Map<string, any[]>()
             for (const row of teacherScores) {
               const key = `${row.project_id}-${row.group_id}`
@@ -126,7 +129,7 @@ export default function ScoreList() {
                 projectId: first.project_id,
                 projectName: first.projects?.name || '',
                 studentName: '',
-                scorerName: first.profiles?.real_name || '',
+                scorerName: myName || '',
                 type: 'guide',
                 totalScore: total,
                 status: 'submitted',

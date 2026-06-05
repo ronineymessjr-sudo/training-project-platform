@@ -86,13 +86,20 @@ export const getProjectWorkload = async (
 ): Promise<ApiResponse<WorkloadSummary[]>> => {
   const result = await supabase
     .from('workloads')
-    .select('*, profiles(real_name)')
+    .select('*')
     .eq('project_id', projectId)
 
   const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const records = response.data as any[]
+    // 获取学生姓名
+    const studentIds = [...new Set(records.map((r: any) => r.student_id).filter(Boolean))]
+    let nameMap: Record<string, string> = {}
+    if (studentIds.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, real_name').in('id', studentIds)
+      if (profiles) nameMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.real_name || '']))
+    }
 
     // 按用户汇总
     const summaryMap = new Map<string, WorkloadSummary>()
@@ -101,7 +108,7 @@ export const getProjectWorkload = async (
       if (!summaryMap.has(userId)) {
         summaryMap.set(userId, {
           userId,
-          userName: r.profiles?.real_name || '',
+          userName: nameMap[userId] || '',
           totalHours: 0,
           recordCount: 0,
           approvedHours: 0,
@@ -197,13 +204,19 @@ export const getWorkloadStatistics = async (
 }>> => {
   const result = await supabase
     .from('workloads')
-    .select('*, profiles(real_name)')
+    .select('*')
     .eq('project_id', projectId)
 
   const response: any = fromSupabase(result)
 
   if (response.code === 200) {
     const records = response.data as any[]
+    const studentIds = [...new Set(records.map((r: any) => r.student_id).filter(Boolean))]
+    let nameMap: Record<string, string> = {}
+    if (studentIds.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, real_name').in('id', studentIds)
+      if (profiles) nameMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.real_name || '']))
+    }
     const totalHours = records.reduce((sum: number, r: any) => sum + (r.hours || 0), 0)
 
     // 按用户统计
@@ -213,7 +226,7 @@ export const getWorkloadStatistics = async (
       if (!memberMap.has(userId)) {
         memberMap.set(userId, {
           userId,
-          name: r.profiles?.real_name || '',
+          name: nameMap[userId] || '',
           totalHours: 0,
         })
       }
@@ -245,7 +258,7 @@ export const exportWorkloadReport = async (projectId: number): Promise<ApiRespon
   // Supabase 不支持直接导出，返回数据供前端处理
   const result = await supabase
     .from('workloads')
-    .select('*, profiles(real_name)')
+    .select('*')
     .eq('project_id', projectId)
 
   return fromSupabase(result) as any
@@ -274,18 +287,26 @@ export const reviewWorkload = async (
 export const getPendingWorkloadReviews = async (): Promise<ApiResponse<WorkloadRecord[]>> => {
   const result = await supabase
     .from('workloads')
-    .select('*, profiles(real_name), projects(name)')
+    .select('*, projects(name)')
     .eq('status', 0) // 0 = pending in DB
 
   const response: any = fromSupabase(result)
 
   if (response.code === 200 && Array.isArray(response.data)) {
-    response.data = response.data.map((item: any) => ({
+    const raw = response.data
+    // 获取学生姓名
+    const studentIds = [...new Set(raw.map((item: any) => item.student_id).filter(Boolean))]
+    let nameMap: Record<string, string> = {}
+    if (studentIds.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, real_name').in('id', studentIds)
+      if (profiles) nameMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.real_name || '']))
+    }
+    response.data = raw.map((item: any) => ({
       id: item.id,
       projectId: item.project_id,
       projectName: item.projects?.name || '',
       userId: item.student_id,
-      userName: item.profiles?.real_name || '',
+      userName: nameMap[item.student_id] || '',
       date: item.report_date,
       hours: item.actual_hours || 0,
       content: item.task_description || '',

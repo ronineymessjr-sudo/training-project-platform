@@ -128,12 +128,14 @@ export const getMyDefense = async (): Promise<ApiResponse<Defense | null>> => {
   const groupId = members && members.length > 0 ? (members[0] as any).group_id : null
   if (!groupId) return { code: 404, message: '未找到所在小组', data: null }
 
-  // 2. 查该组的答辩
+  // 2. 查该组的答辩（取最近一条）
   const result = await supabase
     .from('defenses')
     .select('*, projects(name)')
     .eq('group_id', groupId)
-    .single()
+    .order('defense_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   const response: any = fromSupabase(result)
   if (response.code === 200 && response.data) {
@@ -297,17 +299,25 @@ export const endDefense = async (id: number): Promise<ApiResponse<void>> => {
 export const getDefenseScores = async (defenseId: number): Promise<ApiResponse<any[]>> => {
   const result = await supabase
     .from('defense_scores')
-    .select('*, profiles:scorer_id(real_name)')
+    .select('*')
     .eq('defense_id', defenseId)
 
   const response: any = fromSupabase(result)
   if (response.code === 200) {
-    response.data = (response.data || []).map((item: any) => ({
+    const list = response.data || []
+    // 获取评分人姓名
+    const scorerIds = [...new Set(list.map((item: any) => item.scorer_id).filter(Boolean))]
+    let scorerMap: Record<string, string> = {}
+    if (scorerIds.length > 0) {
+      const { data: profiles } = await supabase.from('profiles').select('id, real_name').in('id', scorerIds)
+      if (profiles) scorerMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.real_name || '']))
+    }
+    response.data = list.map((item: any) => ({
       id: item.id,
       defenseId: item.defense_id,
       groupId: item.group_id,
       scorerId: item.scorer_id,
-      scorerName: item.profiles?.real_name || '',
+      scorerName: scorerMap[item.scorer_id] || '',
       scorerRole: item.scorer_role,
       presentationScore: item.presentation_score,
       qaScore: item.qa_score,

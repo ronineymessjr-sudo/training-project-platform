@@ -503,6 +503,15 @@ CREATE POLICY "Authenticated users can view role_menus" ON role_menus FOR SELECT
 
 -- user_roles
 CREATE POLICY "Users can view own roles" ON user_roles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage user_roles" ON user_roles FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
+);
+CREATE POLICY "Admins can update user_roles" ON user_roles FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
+);
+CREATE POLICY "Admins can delete user_roles" ON user_roles FOR DELETE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
+);
 
 -- classes, majors, student_classes
 CREATE POLICY "Authenticated users can view majors" ON majors FOR SELECT USING (auth.uid() IS NOT NULL);
@@ -511,6 +520,12 @@ CREATE POLICY "Authenticated users can view student_classes" ON student_classes 
 
 -- topics
 CREATE POLICY "Authenticated users can view topics" ON topics FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Teachers can create topics" ON topics FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
+CREATE POLICY "Teachers can update topics" ON topics FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id IN (1, 2))
+);
 
 -- projects
 CREATE POLICY "Authenticated users can view projects" ON projects FOR SELECT USING (auth.uid() IS NOT NULL);
@@ -536,6 +551,12 @@ CREATE POLICY "Leaders can update groups" ON groups FOR UPDATE USING (
 CREATE POLICY "Students can apply groups" ON group_applications FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "Users can view own applications" ON group_applications FOR SELECT USING (
     student_id = auth.uid() OR auth.uid() IN (SELECT leader_id FROM groups WHERE id = group_id)
+);
+CREATE POLICY "Admins can manage group_applications" ON group_applications FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
+);
+CREATE POLICY "Admins can update group_applications" ON group_applications FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role_id = 1)
 );
 
 -- progress
