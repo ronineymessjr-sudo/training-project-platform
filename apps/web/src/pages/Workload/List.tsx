@@ -3,7 +3,7 @@ import { messageHolder } from '../../utils/messageHolder'
 import { BarChartOutlined, UserOutlined, ClockCircleOutlined, PlusOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useState, useEffect } from 'react'
-import { getMyWorkload, submitWorkload, getProjectWorkload, reviewWorkload } from '../../api/workload'
+import { getMyWorkload, submitWorkload, getProjectWorkload, reviewWorkload, getPendingWorkloadReviews } from '../../api/workload'
 import { getProjectList } from '../../api/project'
 import { exportWorkloadStatistics } from '../../api/export'
 import { useAuthStore } from '../../stores/auth.store'
@@ -137,33 +137,19 @@ export default function WorkloadList() {
     try {
       await form.validateFields()
       const values = form.getFieldsValue()
-      try {
-        await submitWorkload({
-          ...values,
-          date: values.date.format('YYYY-MM-DD'),
-        })
-      } catch (e) {
-        // Mock 模式降级：API 不可用时忽略错误，走本地添加
-      }
-      // Mock 模式后备：本地添加新工作量记录
-      const newRecord: WorkloadRecord = {
-        id: Date.now(),
-        projectId: values.projectId,
-        projectName: projects.find(p => p.id === values.projectId)?.name || '',
-        userId: user?.id as any,
-        userName: user?.realName || user?.username || '',
+      const response = await submitWorkload({
+        ...values,
         date: values.date.format('YYYY-MM-DD'),
-        hours: values.hours,
-        content: values.content,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
+      })
+      if (response.code !== 200) {
+        throw new Error(response.message || '工作量提交失败')
       }
-      setData(prev => [newRecord, ...prev])
       messageHolder.success('提交成功')
       setModalVisible(false)
       form.resetFields()
+      fetchData()
     } catch (error) {
-      messageHolder.error('提交失败')
+      messageHolder.error(error instanceof Error ? error.message : '提交失败')
     }
   }
 

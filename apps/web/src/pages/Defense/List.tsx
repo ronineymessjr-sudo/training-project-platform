@@ -351,7 +351,7 @@ export default function DefenseList() {
         <Form form={form} layout="vertical">
           <Descriptions column={2}>
             <Descriptions.Item label="项目">{selectedDefense?.projectName}</Descriptions.Item>
-            <Descriptions.Item label="学生">{selectedDefense?.studentName}</Descriptions.Item>
+            <Descriptions.Item label="小组">{selectedDefense?.groupId}</Descriptions.Item>
           </Descriptions>
           
           <Form.Item name="presentationScore" label="答辩陈述得分 (40分)" rules={[{ required: true, message: '请输入答辩陈述得分' }]}>

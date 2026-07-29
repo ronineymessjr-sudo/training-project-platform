@@ -1,5 +1,6 @@
 ﻿import { supabase } from '../lib/supabase'
 import { fromSupabase } from '../utils/supabase-helpers'
+import { getCurrentUserProjectGroup } from './membership'
 
 // API 响应类型
 interface ApiResponse<T> {
@@ -71,7 +72,7 @@ export const getMyWorkload = async (params?: {
       date: d.report_date,
       hours: d.actual_hours || 0,
       content: d.task_description || '',
-      status: d.status === 0 ? 'pending' : d.status === 1 ? 'approved' : d.status === 2 ? 'approved' : 'pending',
+      status: d.status === 0 ? 'pending' : d.status === 1 ? 'approved' : d.status === 2 ? 'rejected' : 'pending',
       reviewerComment: '',
       createdAt: d.created_at,
     }))
@@ -116,12 +117,13 @@ export const getProjectWorkload = async (
         })
       }
       const summary = summaryMap.get(userId)!
-      summary.totalHours += r.hours || 0
+      const hours = Number(r.actual_hours || 0)
+      summary.totalHours += hours
       summary.recordCount += 1
-      if (r.status === 'approved') {
-        summary.approvedHours += r.hours || 0
-      } else if (r.status === 'pending') {
-        summary.pendingHours += r.hours || 0
+      if (r.status === 1) {
+        summary.approvedHours += hours
+      } else if (r.status === 0) {
+        summary.pendingHours += hours
       }
     })
 
@@ -140,17 +142,22 @@ export const submitWorkload = async (data: {
   evidence?: string[]
 }): Promise<ApiResponse<WorkloadRecord>> => {
   const { data: { user } } = await supabase.auth.getUser()
+  const membership = await getCurrentUserProjectGroup(data.projectId)
+  if (membership.code !== 200 || !membership.data) {
+    return { code: membership.code, message: membership.message, data: null as any }
+  }
 
   const result = await supabase
     .from('workloads')
     .insert({
       project_id: data.projectId,
+      group_id: membership.data.groupId,
       student_id: user?.id,
-      date: data.date,
-      hours: data.hours,
-      content: data.content,
-      evidence: data.evidence || [],
-      status: 'pending',
+      task_name: data.content.slice(0, 200),
+      task_description: data.content,
+      actual_hours: data.hours,
+      report_date: data.date,
+      status: 0,
     })
     .select()
     .single()
@@ -164,10 +171,12 @@ export const updateWorkload = async (
   data: Partial<WorkloadRecord>
 ): Promise<ApiResponse<WorkloadRecord>> => {
   const updateData: any = {}
-  if (data.date !== undefined) updateData.date = data.date
-  if (data.hours !== undefined) updateData.hours = data.hours
-  if (data.content !== undefined) updateData.content = data.content
-  if (data.evidence !== undefined) updateData.evidence = data.evidence
+  if (data.date !== undefined) updateData.report_date = data.date
+  if (data.hours !== undefined) updateData.actual_hours = data.hours
+  if (data.content !== undefined) {
+    updateData.task_name = data.content.slice(0, 200)
+    updateData.task_description = data.content
+  }
 
   const result = await supabase
     .from('workloads')

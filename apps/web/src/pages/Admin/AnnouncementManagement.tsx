@@ -85,7 +85,7 @@ export default function AnnouncementManagement() {
         title: values.title,
         content: values.content,
         type: values.type === 'system' ? 1 : values.type === 'activity' ? 2 : 3,
-        target_roles: targetRolesMap[values.targetScope] || null,
+        target_roles: targetRolesMap[values.targetScope] || undefined,
       }
       await createAnnouncement(announcementData)
       messageHolder.success('创建成功')
