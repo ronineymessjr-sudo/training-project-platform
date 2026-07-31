@@ -99,7 +99,7 @@ export const getGroupList = async (params?: {
 
     // 批量获取各组的实时成员数
     const groupIds = items.map((item: any) => item.id).filter(Boolean)
-    let memberCountMap: Record<number, number> = {}
+    const memberCountMap: Record<number, number> = {}
     if (groupIds.length > 0) {
       // 对每个组单独count，避免 Supabase 跨表聚合问题
       for (const gid of groupIds) {

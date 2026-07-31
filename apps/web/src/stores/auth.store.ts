@@ -137,7 +137,7 @@ export const useAuthStore = create<AuthState>()(
                 })
                 return
               }
-            } catch {}
+            } catch { /* Ignore invalid persisted mock sessions and require a new login. */ }
           }
           set({ isLoading: false, isAuthenticated: false, user: null, token: null })
           return
